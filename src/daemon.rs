@@ -92,8 +92,9 @@ pub fn run(initial_action: Option<InitialAction>) -> anyhow::Result<()> {
     };
 
     // Primeira vez que o printcher roda de verdade nesta máquina: liga
-    // autostart por padrão (sem exigir que o usuário mexa em nada).
-    crate::config::load_or_init();
+    // autostart por padrão (sem exigir que o usuário mexa em nada) e marca
+    // pra mostrar um banner de boas-vindas na tela de configurações.
+    let (_, is_first_run) = crate::config::load_or_init();
 
     // O atalho global (portal GlobalShortcuts) roda numa task própria do
     // runtime, em paralelo com o loop do GTK. Se o portal não estiver
@@ -121,7 +122,7 @@ pub fn run(initial_action: Option<InitialAction>) -> anyhow::Result<()> {
         tx.send_blocking(action.daemon_event())?;
     }
 
-    run_gtk_loop(runtime, connection, tray_handle, tx, configure_tx, rx)
+    run_gtk_loop(runtime, connection, tray_handle, tx, configure_tx, rx, is_first_run)
 }
 
 /// Pede pra uma instância em execução encerrar. Não faz nada (silenciosamente)
@@ -194,6 +195,7 @@ fn run_gtk_loop(
     tx: async_channel::Sender<DaemonEvent>,
     configure_tx: async_channel::Sender<()>,
     rx: async_channel::Receiver<DaemonEvent>,
+    is_first_run: bool,
 ) -> anyhow::Result<()> {
     // NON_UNIQUE: a instância única já é garantida por nós mesmos (posse do
     // nome com.printcher.Printcher via zbus, acima). Sem essa flag, o
@@ -232,6 +234,7 @@ fn run_gtk_loop(
                         &app,
                         tx.clone(),
                         configure_tx.clone(),
+                        is_first_run,
                     ),
                     DaemonEvent::Quit => {
                         app.quit();
@@ -261,11 +264,25 @@ async fn handle_capture(app: &gtk::Application, handle: &tokio::runtime::Handle)
 
     match result_rx.recv().await {
         Ok(Ok(path)) => {
-            if let Err(e) = editor::open_editor_window(app, path) {
+            if let Err(e) = editor::open_editor_window(app, path, handle.clone()) {
                 eprintln!("Erro ao abrir o editor: {e}");
+                notify_error(handle, "capture-error", "Não foi possível abrir o editor", &e);
             }
         }
-        Ok(Err(e)) => eprintln!("Erro na captura: {e}"),
+        Ok(Err(e)) => {
+            eprintln!("Erro na captura: {e}");
+            notify_error(handle, "capture-error", "Não foi possível capturar a tela", &e);
+        }
         Err(_) => {}
     }
+}
+
+/// Loga e manda uma notificação de erro pro usuário (a captura roda em
+/// segundo plano, sem terminal visível — sem isso, uma falha passaria
+/// despercebida).
+fn notify_error(handle: &tokio::runtime::Handle, id: &'static str, title: &'static str, error: &anyhow::Error) {
+    let body = error.to_string();
+    handle.spawn(async move {
+        let _ = crate::notify::send(id, title, &body).await;
+    });
 }

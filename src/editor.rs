@@ -69,8 +69,13 @@ struct AppState {
 /// Abre uma janela do editor de captura (crop + anotações) sobre a imagem
 /// congelada, associada à `Application` do daemon já em execução. Não
 /// bloqueia: a janela fica sob o controle do loop principal do GTK que já
-/// está rodando.
-pub fn open_editor_window(app: &gtk::Application, image_path: PathBuf) -> anyhow::Result<()> {
+/// está rodando. `runtime` é usado só pra mandar notificações do sistema
+/// (Salvar/Copiar rodam no thread principal do GTK, não numa task tokio).
+pub fn open_editor_window(
+    app: &gtk::Application,
+    image_path: PathBuf,
+    runtime: tokio::runtime::Handle,
+) -> anyhow::Result<()> {
     let mut file = File::open(&image_path)?;
     let image = cairo::ImageSurface::create_from_png(&mut file)
         .map_err(|e| anyhow::anyhow!("falha ao carregar captura: {e:?}"))?;
@@ -185,15 +190,22 @@ pub fn open_editor_window(app: &gtk::Application, image_path: PathBuf) -> anyhow
     let copy_btn = gtk::Button::with_label("Copiar");
     {
         let state = state.clone();
-        copy_btn.connect_clicked(move |btn| match compose_final(&state.borrow()) {
-            Ok(surface) => match encode_png_bytes(&surface) {
-                Ok(bytes) => match gdk::Texture::from_bytes(&glib::Bytes::from(&bytes)) {
-                    Ok(texture) => btn.clipboard().set_texture(&texture),
-                    Err(e) => eprintln!("Erro ao criar textura: {e}"),
-                },
-                Err(e) => eprintln!("Erro ao codificar PNG: {e}"),
-            },
-            Err(e) => eprintln!("Erro ao compor imagem: {e}"),
+        let runtime = runtime.clone();
+        copy_btn.connect_clicked(move |btn| {
+            let result = compose_final(&state.borrow()).and_then(|surface| {
+                let bytes = encode_png_bytes(&surface)?;
+                let texture = gdk::Texture::from_bytes(&glib::Bytes::from(&bytes))
+                    .map_err(|e| anyhow::anyhow!("falha ao criar textura: {e}"))?;
+                btn.clipboard().set_texture(&texture);
+                Ok(())
+            });
+            match result {
+                Ok(()) => notify(&runtime, "editor-copy", "Copiado", "A captura foi copiada para a área de transferência.".to_string()),
+                Err(e) => {
+                    eprintln!("Erro ao copiar: {e}");
+                    notify(&runtime, "editor-copy", "Falha ao copiar", e.to_string());
+                }
+            }
         });
     }
     toolbar.append(&copy_btn);
@@ -202,12 +214,19 @@ pub fn open_editor_window(app: &gtk::Application, image_path: PathBuf) -> anyhow
     {
         let state = state.clone();
         let window = window.clone();
+        let runtime = runtime.clone();
         save_btn.connect_clicked(move |_| {
             let result = compose_final(&state.borrow())
                 .and_then(|surface| save_surface(&surface, &state.borrow().image_path));
             match result {
-                Ok(()) => window.close(),
-                Err(e) => eprintln!("Erro ao salvar: {e}"),
+                Ok(()) => {
+                    notify(&runtime, "editor-save", "Captura salva", "Salva com sucesso.".to_string());
+                    window.close();
+                }
+                Err(e) => {
+                    eprintln!("Erro ao salvar: {e}");
+                    notify(&runtime, "editor-save", "Falha ao salvar", e.to_string());
+                }
             }
         });
     }
@@ -348,6 +367,14 @@ pub fn open_editor_window(app: &gtk::Application, image_path: PathBuf) -> anyhow
     window.fullscreen();
     window.present();
     Ok(())
+}
+
+/// Manda uma notificação do sistema em segundo plano (dispara e esquece),
+/// sem bloquear o thread do GTK.
+fn notify(runtime: &tokio::runtime::Handle, id: &'static str, title: &'static str, body: String) {
+    runtime.spawn(async move {
+        let _ = crate::notify::send(id, title, &body).await;
+    });
 }
 
 fn undo(state: &mut AppState) {

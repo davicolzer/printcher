@@ -28,6 +28,10 @@ Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](htt
   daemon corretamente, encerramento limpo). O **conteúdo visual da janela e
   o diálogo de confirmação ao fechar** ainda não foram vistos numa tela de
   verdade.
+- 🚧 Feedback pro usuário (`src/notify.rs`, banner de boas-vindas,
+  `--uninstall-all`): implementado e testado sem tela (primeira execução,
+  desinstalação completa). **Notificações e banner ainda não vistos
+  aparecendo de verdade** — só sei que o código não crasha ao montá-los.
 - 🚧 Empacotamento (Flatpak): manifesto escrito, **build ainda não testado**
   (falta `flatpak-builder` e o download do runtime/SDK) — agora também
   pré-requisito real pro M7 funcionar
@@ -135,7 +139,9 @@ novo `PreferencesGroup`/linha, sem mexer no resto. Hoje tem:
 As configurações ficam em `~/.config/printcher/config.toml`. Na primeira
 execução (nenhum config ainda existe), `start_on_login` já entra `true` por
 padrão e o autostart é registrado sozinho — não precisa de nenhum passo
-manual na instalação.
+manual na instalação. Essa primeira janela também mostra um grupo extra
+"Bem-vindo ao printcher!" chamando atenção pro atalho de captura logo
+abaixo, já que configurar a tecla é o único passo manual que sobra.
 
 Fechar a janela pergunta se você quer encerrar o printcher por completo ou
 deixá-lo em segundo plano (é isso que mantém o atalho global e a bandeja
@@ -152,6 +158,28 @@ janela de configurações (não captura):
 cargo run --release -- --install-launcher
 cargo run --release -- --uninstall-launcher
 ```
+
+### Notificações do sistema
+
+O printcher roda em segundo plano, sem terminal visível — então erros e
+confirmações que antes só iam pro `eprintln!` (invisíveis num uso real)
+agora também mandam uma notificação do sistema via
+`org.freedesktop.portal.Notification` (`src/notify.rs`, mesmo portal do
+Screenshot/GlobalShortcuts, sem permissão nova no Flatpak):
+
+- Falha ao capturar a tela ou abrir o editor.
+- Botão Salvar do editor: sucesso ("Captura salva") ou falha.
+- Botão Copiar do editor: sucesso ("Copiado para a área de transferência")
+  ou falha — antes não dava feedback nenhum.
+
+### Desinstalar tudo
+
+```bash
+cargo run --release -- --uninstall-all
+```
+
+Remove autostart, ícone do launcher e `~/.config/printcher/`. **Não** mexe
+em `~/Pictures/printcher/` — são screenshots seus, não rastro do app.
 
 ## Empacotamento (Flatpak) e preparação pro Flathub
 

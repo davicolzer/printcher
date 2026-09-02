@@ -28,10 +28,11 @@ pub fn load() -> Config {
 /// Como [`load`], mas na primeira execução (nenhum arquivo de config ainda)
 /// já liga "iniciar com o sistema" por padrão e registra o autostart.
 /// Chamar só uma vez, ao virar daemon de verdade — não a cada tentativa de
-/// cliente.
-pub fn load_or_init() -> Config {
+/// cliente. Retorna também se era a primeira execução, pra quem chamou
+/// poder dar as boas-vindas (ex: banner na tela de configurações).
+pub fn load_or_init() -> (Config, bool) {
     if config_path().exists() {
-        return load();
+        return (load(), false);
     }
 
     let cfg = Config {
@@ -43,7 +44,7 @@ pub fn load_or_init() -> Config {
     if let Err(e) = crate::autostart::install() {
         eprintln!("Erro ao ligar autostart na primeira execução: {e}");
     }
-    cfg
+    (cfg, true)
 }
 
 pub fn save(config: &Config) -> anyhow::Result<()> {
@@ -56,6 +57,21 @@ pub fn save(config: &Config) -> anyhow::Result<()> {
 }
 
 fn config_path() -> PathBuf {
-    let config_dir = dirs::config_dir().unwrap_or_else(|| dirs::home_dir().expect("home directory not found"));
-    config_dir.join("printcher").join("config.toml")
+    config_dir().join("config.toml")
+}
+
+fn config_dir() -> PathBuf {
+    let base = dirs::config_dir().unwrap_or_else(|| dirs::home_dir().expect("home directory not found"));
+    base.join("printcher")
+}
+
+/// Remove o diretório de configuração inteiro (`~/.config/printcher/`).
+/// Não mexe nos screenshots salvos (`~/Pictures/printcher/`) — são
+/// conteúdo do usuário, não rastro do app.
+pub fn remove_all() -> anyhow::Result<()> {
+    let dir = config_dir();
+    if dir.exists() {
+        std::fs::remove_dir_all(dir)?;
+    }
+    Ok(())
 }

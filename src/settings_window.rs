@@ -20,6 +20,7 @@ pub fn open_settings_window(
     app: &gtk::Application,
     tx: async_channel::Sender<DaemonEvent>,
     configure_shortcut_tx: async_channel::Sender<()>,
+    is_first_run: bool,
 ) {
     let cfg = config::load();
 
@@ -33,6 +34,9 @@ pub fn open_settings_window(
     let page = adw::PreferencesPage::new();
     window.add(&page);
 
+    if is_first_run {
+        page.add(&welcome_group());
+    }
     page.add(&shortcut_group(configure_shortcut_tx));
     page.add(&general_group(cfg.start_on_login));
 
@@ -75,6 +79,16 @@ async fn confirm_close(window: &adw::PreferencesWindow, tx: &async_channel::Send
         }
         _ => {}
     }
+}
+
+/// Grupo mostrado só na primeira execução, chamando atenção pro grupo de
+/// atalho logo abaixo — é o único passo manual que o usuário precisa fazer
+/// (o resto, tipo autostart, já fica ligado sozinho).
+fn welcome_group() -> adw::PreferencesGroup {
+    adw::PreferencesGroup::builder()
+        .title("Bem-vindo ao printcher!")
+        .description("Configure seu atalho de captura logo abaixo pra começar a usar.")
+        .build()
 }
 
 /// Grupo "Atalho de captura": a tecla em si é configurada pela UI nativa do
