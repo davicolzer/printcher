@@ -43,3 +43,45 @@ fn applications_dir() -> anyhow::Result<std::path::PathBuf> {
     let data_dir = dirs::data_dir().ok_or_else(|| anyhow::anyhow!("diretório de dados não encontrado"))?;
     Ok(data_dir.join("applications"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn install_writes_a_visible_desktop_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_data_home(tmp.path());
+
+        install().unwrap();
+
+        let path = tmp.path().join("applications/com.printcher.Printcher.desktop");
+        let contents = fs::read_to_string(path).unwrap();
+        assert!(contents.contains("[Desktop Entry]"));
+        assert!(contents.contains("Exec="));
+        assert!(contents.contains("--settings"));
+        // Diferente do autostart, esse precisa aparecer no menu.
+        assert!(!contents.contains("NoDisplay"));
+    }
+
+    #[test]
+    fn uninstall_removes_the_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_data_home(tmp.path());
+
+        install().unwrap();
+        let path = tmp.path().join("applications/com.printcher.Printcher.desktop");
+        assert!(path.exists());
+
+        uninstall().unwrap();
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn uninstall_without_prior_install_does_not_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_data_home(tmp.path());
+
+        uninstall().unwrap();
+    }
+}

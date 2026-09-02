@@ -10,6 +10,52 @@ instalar/usar), veja o [`README.md`](../README.md).
 - GTK4 + libadwaita para a interface
 - Captura: X11 nativo (`x11rb`) e Wayland via `xdg-desktop-portal` (`ashpd`)
 
+## Testes
+
+```bash
+cargo test
+```
+
+O projeto mistura lógica pura (fácil de testar) com bastante código de
+integração/"cola" que só funciona com uma sessão gráfica real (GTK, D-Bus,
+portais do xdg-desktop-portal) — isso não é unitariamente testável sem
+mocks artificiais que testariam o mock, não o código. A estratégia:
+
+- **Lógica pura, com testes automatizados de verdade:**
+  `src/editor/render.rs` (geometria, composição da imagem final — inclusive
+  verificando pixels de verdade no PNG resultante), `src/capture/x11.rs`
+  (conversão de bytes BGRX/XRGB pra RGBA), `src/config.rs`,
+  `src/autostart.rs`, `src/launcher.rs` (geração de arquivos `.desktop`,
+  isolados do sistema real via `XDG_CONFIG_HOME`/`XDG_DATA_HOME` —
+  `src/testutil.rs`), e o mapeamento de comandos em `src/daemon.rs`
+  (`InitialAction`).
+- **Cola de GTK/D-Bus/portal, validada manualmente:** `src/main.rs`,
+  a maior parte de `src/daemon.rs`, `src/editor.rs` (só a construção da
+  janela — a lógica dela mora em `render.rs`), `src/settings_window.rs`,
+  `src/tray.rs`, `src/global_shortcut.rs`, `src/notify.rs`,
+  `src/capture.rs`/`src/capture/wayland.rs`. Validado do mesmo jeito que
+  fizemos durante o desenvolvimento: subir o daemon em segundo plano e
+  checar via D-Bus/`pgrep`/arquivos gerados (sem tela) — o que depende de
+  interação visual real (editor, notificações, diálogos) fica registrado
+  como pendente no `README`/`CHANGELOG` até ser validado numa tela de
+  verdade.
+
+Cobertura (medida com [`cargo-tarpaulin`](https://github.com/xd009642/tarpaulin),
+excluindo os arquivos de cola acima):
+
+```bash
+cargo tarpaulin --exclude-files 'src/main.rs' --exclude-files 'src/daemon.rs' \
+  --exclude-files 'src/notify.rs' --exclude-files 'src/tray.rs' \
+  --exclude-files 'src/settings_window.rs' --exclude-files 'src/global_shortcut.rs' \
+  --exclude-files 'src/capture.rs' --exclude-files 'src/capture/wayland.rs' \
+  --exclude-files 'src/editor.rs'
+```
+
+Resultado atual: **92,6%** da lógica testável (`src/editor/render.rs` em
+100%). Rodar sem os `--exclude-files` mostra a cobertura do repositório
+inteiro (~26%) — número baixo esperado, já que a maior parte do código é
+cola de integração por natureza, não falta de testes.
+
 ## Status por funcionalidade
 
 - ✅ Captura full screen (Wayland/GNOME) — validado

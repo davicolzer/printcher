@@ -75,3 +75,69 @@ pub fn remove_all() -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_has_autostart_off() {
+        assert!(!Config::default().start_on_login);
+    }
+
+    #[test]
+    fn load_without_file_returns_default() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_config_home(tmp.path());
+
+        let cfg = load();
+        assert!(!cfg.start_on_login);
+    }
+
+    #[test]
+    fn save_then_load_round_trips() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_config_home(tmp.path());
+
+        save(&Config {
+            start_on_login: true,
+        })
+        .unwrap();
+
+        assert!(load().start_on_login);
+        assert!(tmp.path().join("printcher/config.toml").exists());
+    }
+
+    #[test]
+    fn load_or_init_only_runs_first_time() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_config_home(tmp.path());
+
+        let (cfg, first) = load_or_init();
+        assert!(first);
+        assert!(cfg.start_on_login);
+
+        let (_, first_again) = load_or_init();
+        assert!(!first_again);
+    }
+
+    #[test]
+    fn remove_all_deletes_the_config_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_config_home(tmp.path());
+
+        save(&Config::default()).unwrap();
+        assert!(tmp.path().join("printcher").exists());
+
+        remove_all().unwrap();
+        assert!(!tmp.path().join("printcher").exists());
+    }
+
+    #[test]
+    fn remove_all_is_a_noop_when_nothing_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_config_home(tmp.path());
+
+        remove_all().unwrap();
+    }
+}

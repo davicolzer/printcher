@@ -13,7 +13,7 @@ const METHOD_QUIT: &str = "Quit";
 const METHOD_CONFIGURE_SHORTCUT: &str = "ConfigureShortcut";
 const METHOD_OPEN_SETTINGS: &str = "OpenSettings";
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DaemonEvent {
     Capture,
     Quit,
@@ -285,4 +285,32 @@ fn notify_error(handle: &tokio::runtime::Handle, id: &'static str, title: &'stat
     handle.spawn(async move {
         let _ = crate::notify::send(id, title, &body).await;
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capture_maps_to_the_capture_dbus_method_and_event() {
+        assert_eq!(InitialAction::Capture.dbus_method(), METHOD_CAPTURE);
+        assert_eq!(InitialAction::Capture.daemon_event(), DaemonEvent::Capture);
+    }
+
+    #[test]
+    fn open_settings_maps_to_the_open_settings_dbus_method_and_event() {
+        assert_eq!(InitialAction::OpenSettings.dbus_method(), METHOD_OPEN_SETTINGS);
+        assert_eq!(InitialAction::OpenSettings.daemon_event(), DaemonEvent::OpenSettings);
+    }
+
+    #[test]
+    fn dbus_method_names_are_pascal_case_matching_the_zbus_macro_convention() {
+        // A macro #[interface] converte nomes de método snake_case pra
+        // PascalCase -- essas constantes precisam bater com isso pro
+        // call_remote() do lado cliente acertar o método certo.
+        assert_eq!(METHOD_CAPTURE, "Capture");
+        assert_eq!(METHOD_QUIT, "Quit");
+        assert_eq!(METHOD_CONFIGURE_SHORTCUT, "ConfigureShortcut");
+        assert_eq!(METHOD_OPEN_SETTINGS, "OpenSettings");
+    }
 }

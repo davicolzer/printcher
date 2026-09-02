@@ -28,3 +28,6 @@ tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
 toml = "1.1.4"
 x11rb = "0.14.0"
 zbus = { version = "5.19.0", features = ["tokio"] }
+
+[dev-dependencies]
+tempfile = "3.27.0"

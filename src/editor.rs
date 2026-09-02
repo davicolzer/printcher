@@ -1,6 +1,12 @@
+//! Janela do editor de captura: construção de widgets GTK e ligação dos
+//! eventos (mouse, teclado, botões) com a lógica pura em [`render`]. Não
+//! tem testes automatizados aqui — depende de uma sessão gráfica real pra
+//! rodar, então é validado manualmente (veja `docs/DEVELOPMENT.md`).
+
+mod render;
+
 use std::cell::RefCell;
 use std::fs::File;
-use std::path::PathBuf;
 use std::rc::Rc;
 
 use gtk::cairo;
@@ -8,63 +14,7 @@ use gtk::gdk;
 use gtk::glib;
 use gtk::prelude::*;
 
-type Point = (f64, f64);
-type Color = (f64, f64, f64);
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum Tool {
-    Select,
-    Crop,
-    Line,
-    Arrow,
-    Rect,
-    Ellipse,
-    Text,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct CropRect {
-    p0: Point,
-    p1: Point,
-}
-
-impl CropRect {
-    /// Retorna (x0, y0, x1, y1) com x0<=x1 e y0<=y1.
-    fn normalized(&self) -> (f64, f64, f64, f64) {
-        let (x0, x1) = if self.p0.0 <= self.p1.0 {
-            (self.p0.0, self.p1.0)
-        } else {
-            (self.p1.0, self.p0.0)
-        };
-        let (y0, y1) = if self.p0.1 <= self.p1.1 {
-            (self.p0.1, self.p1.1)
-        } else {
-            (self.p1.1, self.p0.1)
-        };
-        (x0, y0, x1, y1)
-    }
-}
-
-#[derive(Debug, Clone)]
-enum Annotation {
-    Line { p0: Point, p1: Point, color: Color, width: f64 },
-    Arrow { p0: Point, p1: Point, color: Color, width: f64 },
-    Rect { p0: Point, p1: Point, color: Color, width: f64 },
-    Ellipse { p0: Point, p1: Point, color: Color, width: f64 },
-    Text { pos: Point, text: String, color: Color, size: f64 },
-}
-
-struct AppState {
-    image: cairo::ImageSurface,
-    image_path: PathBuf,
-    tool: Tool,
-    color: Color,
-    stroke_width: f64,
-    annotations: Vec<Annotation>,
-    crop: Option<CropRect>,
-    drag_start: Option<Point>,
-    drag_current: Option<Point>,
-}
+use render::{AppState, Annotation, CropRect, Point, Tool};
 
 /// Abre uma janela do editor de captura (crop + anotações) sobre a imagem
 /// congelada, associada à `Application` do daemon já em execução. Não
@@ -73,7 +23,7 @@ struct AppState {
 /// (Salvar/Copiar rodam no thread principal do GTK, não numa task tokio).
 pub fn open_editor_window(
     app: &gtk::Application,
-    image_path: PathBuf,
+    image_path: std::path::PathBuf,
     runtime: tokio::runtime::Handle,
 ) -> anyhow::Result<()> {
     let mut file = File::open(&image_path)?;
@@ -170,7 +120,7 @@ pub fn open_editor_window(
         let state = state.clone();
         let area_clone = area.clone();
         undo_btn.connect_clicked(move |_| {
-            undo(&mut state.borrow_mut());
+            render::undo(&mut state.borrow_mut());
             area_clone.queue_draw();
         });
     }
@@ -192,8 +142,8 @@ pub fn open_editor_window(
         let state = state.clone();
         let runtime = runtime.clone();
         copy_btn.connect_clicked(move |btn| {
-            let result = compose_final(&state.borrow()).and_then(|surface| {
-                let bytes = encode_png_bytes(&surface)?;
+            let result = render::compose_final(&state.borrow()).and_then(|surface| {
+                let bytes = render::encode_png_bytes(&surface)?;
                 let texture = gdk::Texture::from_bytes(&glib::Bytes::from(&bytes))
                     .map_err(|e| anyhow::anyhow!("falha ao criar textura: {e}"))?;
                 btn.clipboard().set_texture(&texture);
@@ -216,8 +166,8 @@ pub fn open_editor_window(
         let window = window.clone();
         let runtime = runtime.clone();
         save_btn.connect_clicked(move |_| {
-            let result = compose_final(&state.borrow())
-                .and_then(|surface| save_surface(&surface, &state.borrow().image_path));
+            let result = render::compose_final(&state.borrow())
+                .and_then(|surface| render::save_surface(&surface, &state.borrow().image_path));
             match result {
                 Ok(()) => {
                     notify(&runtime, "editor-save", "Captura salva", "Salva com sucesso.".to_string());
@@ -241,24 +191,24 @@ pub fn open_editor_window(
             let _ = cr.paint();
 
             for ann in &state.annotations {
-                let _ = draw_annotation(cr, ann);
+                let _ = render::draw_annotation(cr, ann);
             }
 
             if let (Some(start), Some(current)) = (state.drag_start, state.drag_current) {
                 if matches!(state.tool, Tool::Line | Tool::Arrow | Tool::Rect | Tool::Ellipse) {
-                    let preview = make_annotation(state.tool, start, current, state.color, state.stroke_width);
+                    let preview = render::make_annotation(state.tool, start, current, state.color, state.stroke_width);
                     if let Some(ann) = preview {
-                        let _ = draw_annotation(cr, &ann);
+                        let _ = render::draw_annotation(cr, &ann);
                     }
                 }
             }
 
             let (img_w, img_h) = (state.image.width() as f64, state.image.height() as f64);
             if let Some(r) = &state.crop {
-                draw_crop_overlay(cr, r, img_w, img_h);
+                render::draw_crop_overlay(cr, r, img_w, img_h);
             } else if state.tool == Tool::Crop {
                 if let (Some(start), Some(current)) = (state.drag_start, state.drag_current) {
-                    draw_crop_overlay(cr, &CropRect { p0: start, p1: current }, img_w, img_h);
+                    render::draw_crop_overlay(cr, &CropRect { p0: start, p1: current }, img_w, img_h);
                 }
             }
         });
@@ -299,7 +249,7 @@ pub fn open_editor_window(
                 match state.tool {
                     Tool::Crop => state.crop = Some(CropRect { p0: start, p1: end }),
                     Tool::Line | Tool::Arrow | Tool::Rect | Tool::Ellipse => {
-                        if let Some(ann) = make_annotation(state.tool, start, end, state.color, state.stroke_width) {
+                        if let Some(ann) = render::make_annotation(state.tool, start, end, state.color, state.stroke_width) {
                             state.annotations.push(ann);
                         }
                     }
@@ -346,7 +296,7 @@ pub fn open_editor_window(
             }
             if modifiers.contains(gdk::ModifierType::CONTROL_MASK) {
                 if key == gdk::Key::z {
-                    undo(&mut state.borrow_mut());
+                    render::undo(&mut state.borrow_mut());
                     area_clone.queue_draw();
                     return glib::Propagation::Stop;
                 }
@@ -375,12 +325,6 @@ fn notify(runtime: &tokio::runtime::Handle, id: &'static str, title: &'static st
     runtime.spawn(async move {
         let _ = crate::notify::send(id, title, &body).await;
     });
-}
-
-fn undo(state: &mut AppState) {
-    if state.annotations.pop().is_none() {
-        state.crop = None;
-    }
 }
 
 fn open_text_popover(area: &gtk::DrawingArea, state: &Rc<RefCell<AppState>>, pos: Point) {
@@ -417,132 +361,4 @@ fn open_text_popover(area: &gtk::DrawingArea, state: &Rc<RefCell<AppState>>, pos
 
     popover.popup();
     entry.grab_focus();
-}
-
-fn make_annotation(tool: Tool, p0: Point, p1: Point, color: Color, width: f64) -> Option<Annotation> {
-    match tool {
-        Tool::Line => Some(Annotation::Line { p0, p1, color, width }),
-        Tool::Arrow => Some(Annotation::Arrow { p0, p1, color, width }),
-        Tool::Rect => Some(Annotation::Rect { p0, p1, color, width }),
-        Tool::Ellipse => Some(Annotation::Ellipse { p0, p1, color, width }),
-        _ => None,
-    }
-}
-
-fn draw_annotation(cr: &cairo::Context, ann: &Annotation) -> Result<(), cairo::Error> {
-    match ann {
-        Annotation::Line { p0, p1, color, width } => {
-            cr.set_source_rgb(color.0, color.1, color.2);
-            cr.set_line_width(*width);
-            cr.move_to(p0.0, p0.1);
-            cr.line_to(p1.0, p1.1);
-            cr.stroke()?;
-        }
-        Annotation::Arrow { p0, p1, color, width } => {
-            cr.set_source_rgb(color.0, color.1, color.2);
-            cr.set_line_width(*width);
-            cr.move_to(p0.0, p0.1);
-            cr.line_to(p1.0, p1.1);
-            cr.stroke()?;
-
-            let angle = (p1.1 - p0.1).atan2(p1.0 - p0.0);
-            let head_len = (*width * 4.0).max(14.0);
-            let spread = std::f64::consts::PI / 7.0;
-            for sign in [-1.0, 1.0] {
-                let a = angle + std::f64::consts::PI - sign * spread;
-                cr.move_to(p1.0, p1.1);
-                cr.line_to(p1.0 + head_len * a.cos(), p1.1 + head_len * a.sin());
-            }
-            cr.stroke()?;
-        }
-        Annotation::Rect { p0, p1, color, width } => {
-            cr.set_source_rgb(color.0, color.1, color.2);
-            cr.set_line_width(*width);
-            cr.rectangle(p0.0.min(p1.0), p0.1.min(p1.1), (p1.0 - p0.0).abs(), (p1.1 - p0.1).abs());
-            cr.stroke()?;
-        }
-        Annotation::Ellipse { p0, p1, color, width } => {
-            cr.set_source_rgb(color.0, color.1, color.2);
-            cr.set_line_width(*width);
-            let cx = (p0.0 + p1.0) / 2.0;
-            let cy = (p0.1 + p1.1) / 2.0;
-            let rx = ((p1.0 - p0.0).abs() / 2.0).max(1.0);
-            let ry = ((p1.1 - p0.1).abs() / 2.0).max(1.0);
-            cr.save()?;
-            cr.translate(cx, cy);
-            cr.scale(rx, ry);
-            cr.arc(0.0, 0.0, 1.0, 0.0, std::f64::consts::TAU);
-            cr.restore()?;
-            cr.stroke()?;
-        }
-        Annotation::Text { pos, text, color, size } => {
-            cr.set_source_rgb(color.0, color.1, color.2);
-            cr.select_font_face("sans-serif", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
-            cr.set_font_size(*size);
-            cr.move_to(pos.0, pos.1);
-            cr.show_text(text)?;
-        }
-    }
-    Ok(())
-}
-
-fn draw_crop_overlay(cr: &cairo::Context, rect: &CropRect, img_w: f64, img_h: f64) {
-    let (x0, y0, x1, y1) = rect.normalized();
-    cr.set_source_rgba(0.0, 0.0, 0.0, 0.5);
-    cr.rectangle(0.0, 0.0, img_w, y0);
-    cr.rectangle(0.0, y1, img_w, img_h - y1);
-    cr.rectangle(0.0, y0, x0, y1 - y0);
-    cr.rectangle(x1, y0, img_w - x1, y1 - y0);
-    let _ = cr.fill();
-
-    cr.set_source_rgb(1.0, 1.0, 1.0);
-    cr.set_line_width(1.5);
-    cr.set_dash(&[6.0, 4.0], 0.0);
-    cr.rectangle(x0, y0, x1 - x0, y1 - y0);
-    let _ = cr.stroke();
-    cr.set_dash(&[], 0.0);
-}
-
-/// Renderiza a imagem base + anotações + corte em uma nova superfície final.
-fn compose_final(state: &AppState) -> anyhow::Result<cairo::ImageSurface> {
-    let (img_w, img_h) = (state.image.width() as f64, state.image.height() as f64);
-    let (cx0, cy0, cx1, cy1) = match &state.crop {
-        Some(r) => r.normalized(),
-        None => (0.0, 0.0, img_w, img_h),
-    };
-    let cx0 = cx0.clamp(0.0, img_w);
-    let cy0 = cy0.clamp(0.0, img_h);
-    let cx1 = cx1.clamp(0.0, img_w);
-    let cy1 = cy1.clamp(0.0, img_h);
-    let out_w = (cx1 - cx0).max(1.0);
-    let out_h = (cy1 - cy0).max(1.0);
-
-    let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, out_w as i32, out_h as i32)
-        .map_err(|e| anyhow::anyhow!("falha ao criar superfície: {e:?}"))?;
-    let cr = cairo::Context::new(&surface).map_err(|e| anyhow::anyhow!("falha ao criar contexto: {e:?}"))?;
-    cr.translate(-cx0, -cy0);
-    cr.set_source_surface(&state.image, 0.0, 0.0)
-        .map_err(|e| anyhow::anyhow!("falha ao desenhar base: {e:?}"))?;
-    cr.paint().map_err(|e| anyhow::anyhow!("falha ao pintar base: {e:?}"))?;
-    for ann in &state.annotations {
-        draw_annotation(&cr, ann).map_err(|e| anyhow::anyhow!("falha ao desenhar anotação: {e:?}"))?;
-    }
-    drop(cr);
-    Ok(surface)
-}
-
-fn save_surface(surface: &cairo::ImageSurface, path: &PathBuf) -> anyhow::Result<()> {
-    let mut file = File::create(path)?;
-    surface
-        .write_to_png(&mut file)
-        .map_err(|e| anyhow::anyhow!("falha ao gravar PNG: {e:?}"))?;
-    Ok(())
-}
-
-fn encode_png_bytes(surface: &cairo::ImageSurface) -> anyhow::Result<Vec<u8>> {
-    let mut buf = Vec::new();
-    surface
-        .write_to_png(&mut buf)
-        .map_err(|e| anyhow::anyhow!("falha ao codificar PNG: {e:?}"))?;
-    Ok(buf)
 }

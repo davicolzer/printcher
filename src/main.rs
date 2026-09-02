@@ -7,6 +7,8 @@ mod global_shortcut;
 mod launcher;
 mod notify;
 mod settings_window;
+#[cfg(test)]
+mod testutil;
 mod tray;
 
 use daemon::InitialAction;

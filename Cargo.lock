@@ -1141,6 +1141,7 @@ dependencies = [
  "libadwaita",
  "percent-encoding",
  "serde",
+ "tempfile",
  "tokio",
  "toml",
  "x11rb",
