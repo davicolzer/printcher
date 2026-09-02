@@ -1,0 +1,12 @@
+[package]
+name = "printcher"
+version = "0.1.0"
+edition = "2021"
+description = "Ferramenta de screenshot/anotação para Linux (X11 + Wayland), inspirada no ShareX"
+repository = "https://github.com/davicolzer/printcher"
+
+[[bin]]
+name = "printcher"
+path = "src/main.rs"
+
+[dependencies]
