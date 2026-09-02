@@ -476,18 +476,18 @@ fn draw_annotation(cr: &cairo::Context, ann: &Annotation) -> Result<(), cairo::E
 fn draw_crop_overlay(cr: &cairo::Context, rect: &CropRect, img_w: f64, img_h: f64) {
     let (x0, y0, x1, y1) = rect.normalized();
     cr.set_source_rgba(0.0, 0.0, 0.0, 0.5);
-    let _ = cr.rectangle(0.0, 0.0, img_w, y0);
-    let _ = cr.rectangle(0.0, y1, img_w, img_h - y1);
-    let _ = cr.rectangle(0.0, y0, x0, y1 - y0);
-    let _ = cr.rectangle(x1, y0, img_w - x1, y1 - y0);
+    cr.rectangle(0.0, 0.0, img_w, y0);
+    cr.rectangle(0.0, y1, img_w, img_h - y1);
+    cr.rectangle(0.0, y0, x0, y1 - y0);
+    cr.rectangle(x1, y0, img_w - x1, y1 - y0);
     let _ = cr.fill();
 
     cr.set_source_rgb(1.0, 1.0, 1.0);
     cr.set_line_width(1.5);
-    let _ = cr.set_dash(&[6.0, 4.0], 0.0);
-    let _ = cr.rectangle(x0, y0, x1 - x0, y1 - y0);
+    cr.set_dash(&[6.0, 4.0], 0.0);
+    cr.rectangle(x0, y0, x1 - x0, y1 - y0);
     let _ = cr.stroke();
-    let _ = cr.set_dash(&[], 0.0);
+    cr.set_dash(&[], 0.0);
 }
 
 /// Renderiza a imagem base + anotações + corte em uma nova superfície final.

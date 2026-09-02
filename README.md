@@ -4,7 +4,13 @@ Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](htt
 
 ## Status
 
-Em desenvolvimento inicial. Sem funcionalidades prontas ainda.
+- ✅ M0 — Ambiente e base do projeto
+- ✅ M1 — Captura full screen (Wayland/GNOME), validado
+- ✅ M2 — Editor de captura (crop, setas, formas, texto), validado
+- ✅ M3 — Copiar para a área de transferência, validado
+- 🚧 M4 — Backend X11: implementado e compilando, **ainda não testado em
+  sessão X11 real** (só temos GNOME Wayland disponível até agora)
+- ⬜ M5 — Atalho global e empacotamento
 
 ## Escopo
 
@@ -32,10 +38,16 @@ edição (crop, setas, formas) acontece localmente sobre essa imagem.
 
 ## Roadmap (entregas)
 
-1. **M0 — Ambiente e base do projeto** (em andamento)
+1. **M0 — Ambiente e base do projeto**
 2. **M1 — Captura full screen (Wayland/GNOME) + salvar em arquivo**
 3. **M2 — Editor de captura: abre a imagem congelada em tela cheia, com
    ferramentas de crop, setas, formas e texto**
 4. **M3 — Copiar para a área de transferência**
 5. **M4 — Backend X11 (paridade com M1–M3)**
 6. **M5 — Atalho global e empacotamento**
+
+A escolha de backend (`src/capture.rs`) é automática: se `WAYLAND_DISPLAY`
+estiver definida, usa o portal; senão, cai para a conexão X11 direta
+(`src/capture/x11.rs`, via `x11rb`, captura a janela raiz com `GetImage`).
+Os dois caminhos produzem o mesmo PNG de saída, então o editor (M2) não
+precisa saber qual foi usado.
