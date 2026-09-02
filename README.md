@@ -20,12 +20,22 @@ Em desenvolvimento inicial. Sem funcionalidades prontas ainda.
 - GTK4 + libadwaita para a interface
 - Captura: X11 nativo (`x11rb`) e Wayland via `xdg-desktop-portal` (`ashpd`)
 
+## Fluxo de captura (estratégia ShareX)
+
+Ao capturar, a tela cheia é congelada (imagem estática) e aberta em um editor
+próprio, em tela cheia. Anotações (setas, formas, texto) podem ser feitas
+sobre a imagem inteira, e o **crop é apenas mais uma ferramenta** da barra,
+não uma etapa obrigatória logo no início — igual ao ShareX. Isso evita a
+necessidade de overlay ao vivo sobre a tela (não suportado no GNOME Wayland
+sem `layer-shell`): a captura via portal já entrega o bitmap parado, e toda a
+edição (crop, setas, formas) acontece localmente sobre essa imagem.
+
 ## Roadmap (entregas)
 
 1. **M0 — Ambiente e base do projeto** (em andamento)
 2. **M1 — Captura full screen (Wayland/GNOME) + salvar em arquivo**
-3. **M2 — Crop local da captura**
+3. **M2 — Editor de captura: abre a imagem congelada em tela cheia, com
+   ferramentas de crop, setas, formas e texto**
 4. **M3 — Copiar para a área de transferência**
 5. **M4 — Backend X11 (paridade com M1–M3)**
-6. **M5 — Editor de anotações (setas, formas, texto, etc.)**
-7. **M6 — Atalho global e empacotamento**
+6. **M5 — Atalho global e empacotamento**
