@@ -3,7 +3,7 @@ use gtk::prelude::*;
 use zbus::fdo::{RequestNameFlags, RequestNameReply};
 use zbus::interface;
 
-use crate::{capture, editor, global_shortcut};
+use crate::{capture, editor, global_shortcut, tray};
 
 const BUS_NAME: &str = "com.printcher.Printcher";
 const OBJECT_PATH: &str = "/com/printcher/Printcher";
@@ -53,7 +53,7 @@ pub fn run(initial_capture: bool) -> anyhow::Result<()> {
     let (tx, rx) = async_channel::unbounded::<DaemonEvent>();
     let (configure_tx, configure_rx) = async_channel::unbounded::<()>();
 
-    let connection = runtime.block_on(become_primary(tx.clone(), configure_tx))?;
+    let connection = runtime.block_on(become_primary(tx.clone(), configure_tx.clone()))?;
     let Some(connection) = connection else {
         if initial_capture {
             runtime.block_on(call_remote(METHOD_CAPTURE))?;
@@ -72,11 +72,22 @@ pub fn run(initial_capture: bool) -> anyhow::Result<()> {
         }
     });
 
+    // Ícone na bandeja (StatusNotifierItem). Sem host disponível (ex: GNOME
+    // sem a extensão AppIndicator), só loga e segue sem ícone — o resto do
+    // daemon funciona igual.
+    let tray_handle = match runtime.block_on(tray::spawn(tx.clone(), configure_tx)) {
+        Ok(handle) => Some(handle),
+        Err(e) => {
+            eprintln!("Ícone da bandeja indisponível: {e}");
+            None
+        }
+    };
+
     if initial_capture {
         tx.send_blocking(DaemonEvent::Capture)?;
     }
 
-    run_gtk_loop(runtime, connection, rx)
+    run_gtk_loop(runtime, connection, tray_handle, rx)
 }
 
 /// Pede pra uma instância em execução encerrar. Não faz nada (silenciosamente)
@@ -145,6 +156,7 @@ async fn call_remote(method: &str) -> anyhow::Result<()> {
 fn run_gtk_loop(
     runtime: tokio::runtime::Runtime,
     connection: zbus::Connection,
+    tray_handle: Option<ksni::Handle<tray::PrintcherTray>>,
     rx: async_channel::Receiver<DaemonEvent>,
 ) -> anyhow::Result<()> {
     // NON_UNIQUE: a instância única já é garantida por nós mesmos (posse do
@@ -183,8 +195,9 @@ fn run_gtk_loop(
 
     app.run_with_args::<&str>(&[]);
 
-    // Mantém runtime e connection vivos até aqui; soltar antes fecharia o
-    // serviço D-Bus e pararia os workers do tokio no meio do caminho.
+    // Mantém runtime, connection e tray_handle vivos até aqui; soltar antes
+    // fecharia o serviço D-Bus (e o ícone da bandeja) no meio do caminho.
+    drop(tray_handle);
     drop(connection);
     drop(runtime);
     Ok(())

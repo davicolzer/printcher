@@ -17,9 +17,11 @@ Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](htt
   Flatpak** (o portal exige identidade de app — rejeita o binário "cru" com
   `An app id is required`). Capturar via D-Bus/tray continua funcionando
   normalmente mesmo sem isso.
-- ⬜ M8 — Ícone na bandeja (StatusNotifierItem via `ksni`). No GNOME só
-  aparece com a extensão "AppIndicator and KStatusNotifierItem Support"
-  instalada (não vem por padrão no Fedora); nativo no KDE.
+- 🚧 M8 — Ícone na bandeja (StatusNotifierItem via `ksni`): implementado,
+  degrada graciosamente. Testado aqui: sem a extensão "AppIndicator and
+  KStatusNotifierItem Support" (não vem por padrão no Fedora), o registro
+  falha com `ServiceUnknown` e o daemon segue funcionando normalmente sem
+  ícone. Nativo no KDE, sem extensão nenhuma.
 - 🚧 Empacotamento (Flatpak): manifesto escrito, **build ainda não testado**
   (falta `flatpak-builder` e o download do runtime/SDK) — agora também
   pré-requisito real pro M7 funcionar
@@ -88,9 +90,13 @@ funciona em qualquer desktop que implemente o portal, GNOME ou KDE). A tecla
 de fato é escolhida pelo usuário na UI de configuração do sistema, não
 fixada pelo app. **Importante:** esse portal exige que o processo tenha uma
 identidade de app reconhecida — rodando o binário direto (`cargo run`) ele
-falha com `An app id is required` e o daemon segue sem esse atalho (D-Bus e,
-futuramente, a bandeja continuam funcionando). Isso só se resolve rodando
-como Flatpak.
+falha com `An app id is required` e o daemon segue sem esse atalho (D-Bus e
+bandeja continuam funcionando). Isso só se resolve rodando como Flatpak.
+
+O ícone da bandeja (`src/tray.rs`, via `ksni`) sobe junto com o daemon, com
+um menu (Capturar agora / Configurar atalho / Sair). Se não houver um "host"
+de bandeja no D-Bus (comum no GNOME sem extensão), o registro falha e é só
+logado — o resto do daemon não é afetado.
 
 Autostart (inicia o daemon junto com a sessão, sem capturar):
 

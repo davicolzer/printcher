@@ -3,6 +3,7 @@ mod capture;
 mod daemon;
 mod editor;
 mod global_shortcut;
+mod tray;
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
