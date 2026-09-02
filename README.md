@@ -1,8 +1,42 @@
 # printcher
 
-Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](https://getsharex.com/), com suporte a X11 e Wayland (foco de testes: Fedora + GNOME Wayland).
+Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](https://getsharex.com/).
 
-## Como buildar
+Funciona tanto em **X11** quanto em **Wayland**, e em qualquer desktop que
+siga os padrões do freedesktop.org (testado em GNOME; compatível com KDE).
+
+> **Status:** em desenvolvimento ativo. As funcionalidades principais já
+> estão implementadas; ainda não existe um pacote pronto pra instalar (veja
+> [Instalação](#instalação)). Detalhes técnicos e o que falta validar estão
+> em [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+
+## Funcionalidades
+
+- **Captura de tela cheia** com um atalho de teclado configurável.
+- **Editor de anotações**: setas, retângulos, elipses, linhas, texto e
+  recorte (crop) — tudo isso sobre a captura "congelada", sem pressa.
+- **Copiar pra área de transferência** ou **salvar em arquivo**, com apenas
+  um clique (ou atalho de teclado).
+- **Roda em segundo plano**: um ícone na bandeja do sistema dá acesso rápido
+  a capturar, configurar o atalho, ou abrir as configurações.
+- **Inicia com o sistema** automaticamente (configurável).
+- Sem upload nem compartilhamento externo — tudo fica local, na sua
+  máquina.
+
+## Como funciona
+
+Ao pressionar o atalho, o printcher captura a tela inteira e abre um editor
+próprio, em tela cheia — a mesma estratégia do ShareX. Você pode desenhar
+setas, formas e texto sobre a imagem inteira, e recortar (crop) só quando
+quiser: cortar é mais uma ferramenta na barra, não uma etapa obrigatória
+logo no início.
+
+## Instalação
+
+Ainda não existe um instalador ou pacote pronto — por enquanto, a única
+forma de usar o printcher é **compilando a partir do código-fonte**.
+(Um pacote Flatpak já está preparado, mas o build ainda não foi feito —
+acompanhe o progresso em [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).)
 
 Pré-requisitos (Fedora):
 
@@ -12,10 +46,9 @@ sudo dnf install rustup gtk4-devel libadwaita-devel dbus-devel \
 rustup-init -y --default-toolchain stable --profile default
 ```
 
-Em outras distros, o nome dos pacotes muda (`apt`: `libgtk-4-dev`,
+Em outras distros, o nome dos pacotes muda (no `apt`: `libgtk-4-dev`,
 `libadwaita-1-dev`, `libdbus-1-dev`, `libxcb-dev`, `libx11-dev`,
-`libxrandr-dev`, `libxfixes-dev`), mas a ideia é a mesma. O Rust em si
-(`rustup`) é igual em qualquer distro.
+`libxrandr-dev`, `libxfixes-dev`), mas a ideia é a mesma.
 
 ```bash
 git clone https://github.com/davicolzer/printcher.git
@@ -23,232 +56,44 @@ cd printcher
 cargo build --release
 ```
 
-## Status
+O binário fica em `target/release/printcher`.
 
-- ✅ M0 — Ambiente e base do projeto
-- ✅ M1 — Captura full screen (Wayland/GNOME), validado
-- ✅ M2 — Editor de captura (crop, setas, formas, texto), validado
-- ✅ M3 — Copiar para a área de transferência, validado
-- 🚧 M4 — Backend X11: implementado e compilando, **ainda não testado em
-  sessão X11 real** (só temos GNOME Wayland disponível até agora)
-- ✅ M6 — Processo em segundo plano (daemon de instância única + autostart),
-  validado de ponta a ponta via D-Bus
-- 🚧 M7 — Atalho global via portal (`GlobalShortcuts`): implementado, degrada
-  graciosamente, mas **o atalho de tecla em si só funciona rodando como
-  Flatpak** (o portal exige identidade de app — rejeita o binário "cru" com
-  `An app id is required`). Capturar via D-Bus/tray continua funcionando
-  normalmente mesmo sem isso.
-- 🚧 M8 — Ícone na bandeja (StatusNotifierItem via `ksni`): implementado,
-  degrada graciosamente. Testado aqui: sem a extensão "AppIndicator and
-  KStatusNotifierItem Support" (não vem por padrão no Fedora), o registro
-  falha com `ServiceUnknown` e o daemon segue funcionando normalmente sem
-  ícone. Nativo no KDE, sem extensão nenhuma.
-- 🚧 M9 — Tela de configurações (`src/settings_window.rs`, via libadwaita):
-  implementada e validada de ponta a ponta via D-Bus/`pgrep` (primeira
-  execução liga autostart sozinha, ícone de launcher abre/reaproveita o
-  daemon corretamente, encerramento limpo). O **conteúdo visual da janela e
-  o diálogo de confirmação ao fechar** ainda não foram vistos numa tela de
-  verdade.
-- 🚧 Feedback pro usuário (`src/notify.rs`, banner de boas-vindas,
-  `--uninstall-all`): implementado e testado sem tela (primeira execução,
-  desinstalação completa). **Notificações e banner ainda não vistos
-  aparecendo de verdade** — só sei que o código não crasha ao montá-los.
-- 🚧 Empacotamento (Flatpak): manifesto escrito, **build ainda não testado**
-  (falta `flatpak-builder` e o download do runtime/SDK) — agora também
-  pré-requisito real pro M7 funcionar
+## Como usar
 
-## Escopo
-
-- Captura de tela cheia
-- Recorte local (crop) da captura
-- Copiar para a área de transferência / salvar em arquivo
-- Editor de anotações (setas, formas, texto, etc.)
-- Sem upload/compartilhamento externo (fora de escopo por enquanto)
-
-## Stack
-
-- Rust (toolchain via `rustup`, sempre na última stable)
-- GTK4 + libadwaita para a interface
-- Captura: X11 nativo (`x11rb`) e Wayland via `xdg-desktop-portal` (`ashpd`)
-
-## Fluxo de captura (estratégia ShareX)
-
-Ao capturar, a tela cheia é congelada (imagem estática) e aberta em um editor
-próprio, em tela cheia. Anotações (setas, formas, texto) podem ser feitas
-sobre a imagem inteira, e o **crop é apenas mais uma ferramenta** da barra,
-não uma etapa obrigatória logo no início — igual ao ShareX. Isso evita a
-necessidade de overlay ao vivo sobre a tela (não suportado no GNOME Wayland
-sem `layer-shell`): a captura via portal já entrega o bitmap parado, e toda a
-edição (crop, setas, formas) acontece localmente sobre essa imagem.
-
-## Roadmap (entregas)
-
-1. **M0 — Ambiente e base do projeto**
-2. **M1 — Captura full screen (Wayland/GNOME) + salvar em arquivo**
-3. **M2 — Editor de captura: abre a imagem congelada em tela cheia, com
-   ferramentas de crop, setas, formas e texto**
-4. **M3 — Copiar para a área de transferência**
-5. **M4 — Backend X11 (paridade com M1–M3)**
-6. **M6 — Processo em segundo plano: daemon de instância única + autostart**
-7. **M7 — Atalho global via portal (`GlobalShortcuts`), configurável pela UI
-   nativa do sistema — funciona em qualquer desktop que implemente o portal
-   (GNOME e KDE), não só GNOME**
-8. **M8 — Ícone na bandeja (StatusNotifierItem)**
-9. **M9 — Tela de configurações, extensível pra novas opções**
-10. **Empacotamento (Flatpak)**
-
-A escolha de backend (`src/capture.rs`) é automática: se `WAYLAND_DISPLAY`
-estiver definida, usa o portal; senão, cai para a conexão X11 direta
-(`src/capture/x11.rs`, via `x11rb`, captura a janela raiz com `GetImage`).
-Os dois caminhos produzem o mesmo PNG de saída, então o editor (M2) não
-precisa saber qual foi usado.
-
-## Processo em segundo plano e atalho global
-
-O `printcher` agora é um daemon de instância única, com um pequeno protocolo
-de IPC próprio via D-Bus (`com.printcher.Printcher`):
-
-- `printcher` (sem argumentos): se já tem um daemon rodando, só pede pra ele
-  capturar e sai na hora; senão, vira o daemon e já dispara uma captura
-  inicial.
-- `printcher --daemon`: sobe o daemon sem fazer nada além disso (usado pelo
-  autostart).
-- `printcher --settings`: se já tem daemon rodando, só abre a janela de
-  configurações nele; senão, sobe o daemon e já abre a janela (sem
-  capturar). É o comando usado pelo ícone do launcher.
-- `printcher --quit`: pede pro daemon rodando encerrar.
-- `printcher --configure-shortcut`: abre a UI nativa do sistema pra
-  remapear o atalho de captura.
-
-Essas duas ações (`Capture` e `OpenSettings`) são tratadas de forma
-unificada em `daemon::run` via um enum `InitialAction` — "sobe o daemon se
-precisar, e dispara X" é a mesma lógica pros dois casos.
-
-O atalho de teclado em si é registrado via
-`org.freedesktop.portal.GlobalShortcuts` (não mais via `gsettings` — isso
-funciona em qualquer desktop que implemente o portal, GNOME ou KDE). A tecla
-de fato é escolhida pelo usuário na UI de configuração do sistema, não
-fixada pelo app. **Importante:** esse portal exige que o processo tenha uma
-identidade de app reconhecida — rodando o binário direto (`cargo run`) ele
-falha com `An app id is required` e o daemon segue sem esse atalho (D-Bus e
-bandeja continuam funcionando). Isso só se resolve rodando como Flatpak.
-
-O ícone da bandeja (`src/tray.rs`, via `ksni`) sobe junto com o daemon, com
-um menu (Capturar agora / Configurar atalho / Sair). Se não houver um "host"
-de bandeja no D-Bus (comum no GNOME sem extensão), o registro falha e é só
-logado — o resto do daemon não é afetado.
-
-Autostart (inicia o daemon junto com a sessão, sem capturar):
+Na primeira vez, rode o printcher (ou instale o ícone dele no menu de
+aplicativos — veja abaixo) e configure o atalho de captura na tela de
+configurações. Depois disso, é só apertar a tecla escolhida pra capturar.
 
 ```bash
-cargo run --release -- --install-autostart
-cargo run --release -- --uninstall-autostart
+# Registra o ícone no menu de aplicativos do sistema
+target/release/printcher --install-launcher
+
+# Abre a tela de configurações (também acessível pelo ícone na bandeja)
+target/release/printcher --settings
 ```
 
-## Tela de configurações
+Comandos úteis:
 
-`printcher --settings` (ou o ícone "Configurações" no menu da bandeja, ou o
-ícone do launcher) abre uma janela (`src/settings_window.rs`, libadwaita)
-com grupos de preferências independentes — pensada pra crescer: cada nova
-opção futura (pasta de destino, cor padrão de anotação, etc.) entra como um
-novo `PreferencesGroup`/linha, sem mexer no resto. Hoje tem:
+| Comando | O que faz |
+|---|---|
+| `printcher` | Captura a tela agora (sobe o app em segundo plano se ainda não estiver rodando) |
+| `printcher --settings` | Abre a tela de configurações |
+| `printcher --configure-shortcut` | Abre a tela do sistema pra trocar o atalho de captura |
+| `printcher --quit` | Encerra o printcher |
+| `printcher --install-launcher` | Adiciona o ícone ao menu de aplicativos |
+| `printcher --install-autostart` | Liga o início automático com o sistema (já vem ligado por padrão) |
+| `printcher --uninstall-all` | Remove tudo (autostart, ícone, configurações) |
 
-- **Atalho de captura**: botão que abre a UI nativa do sistema pra
-  remapear a tecla (mesmo mecanismo do `--configure-shortcut`).
-- **Geral → Iniciar com o sistema**: liga/desliga o autostart.
+Na tela de configurações também dá pra ligar/desligar o início automático
+com o sistema.
 
-As configurações ficam em `~/.config/printcher/config.toml`. Na primeira
-execução (nenhum config ainda existe), `start_on_login` já entra `true` por
-padrão e o autostart é registrado sozinho — não precisa de nenhum passo
-manual na instalação. Essa primeira janela também mostra um grupo extra
-"Bem-vindo ao printcher!" chamando atenção pro atalho de captura logo
-abaixo, já que configurar a tecla é o único passo manual que sobra.
+## Licença
 
-Fechar a janela pergunta se você quer encerrar o printcher por completo ou
-deixá-lo em segundo plano (é isso que mantém o atalho global e a bandeja
-ativos) — a captura sempre continua funcionando enquanto o processo estiver
-de pé, então fechar a janela sem querer não desliga nada por engano.
+[GPLv3](LICENSE) — o código é livre pra usar e modificar, mas qualquer
+versão derivada precisa continuar aberta sob a mesma licença.
 
-### Ícone no menu de aplicativos
+## Para desenvolvedores
 
-Diferente do autostart (oculto), esse aparece no launcher/menu de
-aplicativos de verdade. Clicar nele sobe o daemon se precisar e abre a
-janela de configurações (não captura):
-
-```bash
-cargo run --release -- --install-launcher
-cargo run --release -- --uninstall-launcher
-```
-
-### Notificações do sistema
-
-O printcher roda em segundo plano, sem terminal visível — então erros e
-confirmações que antes só iam pro `eprintln!` (invisíveis num uso real)
-agora também mandam uma notificação do sistema via
-`org.freedesktop.portal.Notification` (`src/notify.rs`, mesmo portal do
-Screenshot/GlobalShortcuts, sem permissão nova no Flatpak):
-
-- Falha ao capturar a tela ou abrir o editor.
-- Botão Salvar do editor: sucesso ("Captura salva") ou falha.
-- Botão Copiar do editor: sucesso ("Copiado para a área de transferência")
-  ou falha — antes não dava feedback nenhum.
-
-### Desinstalar tudo
-
-```bash
-cargo run --release -- --uninstall-all
-```
-
-Remove autostart, ícone do launcher e `~/.config/printcher/`. **Não** mexe
-em `~/Pictures/printcher/` — são screenshots seus, não rastro do app.
-
-## Empacotamento (Flatpak) e preparação pro Flathub
-
-Manifesto em `flatpak/com.printcher.Printcher.json` — App ID
-`com.printcher.Printcher` (domínio `printcher.com`, de propriedade do
-autor), runtime `org.gnome.Platform` 50 + extensão `rust-stable`. Build
-**100% offline**: as ~350 dependências do Rust já vêm vendorizadas dentro
-do próprio manifesto (geradas com o `flatpak-cargo-generator.py` oficial a
-partir do `Cargo.lock`), sem precisar de `--share=network`. Ainda não
-testado de verdade (precisa de `flatpak-builder`, que baixa o runtime/SDK —
-vários GB). Pra buildar:
-
-```bash
-sudo dnf install flatpak-builder
-flatpak-builder --user --install build-dir flatpak/com.printcher.Printcher.json
-```
-
-Se alguma dependência mudar no `Cargo.toml`/`Cargo.lock`, as fontes
-vendorizadas no manifesto precisam ser regeradas (`flatpak-cargo-generator.py
-Cargo.lock -o cargo-sources.json`, depois mesclar no manifesto).
-
-Também tem, na pasta `flatpak/`:
-- `com.printcher.Printcher.desktop` — launcher instalado dentro do pacote
-  (diferente do `--install-launcher` local, que grava no host).
-- `com.printcher.Printcher.metainfo.xml` — metadados AppStream (nome,
-  descrição, changelog). **Falta adicionar screenshots reais** antes de
-  submeter — ainda não validamos a UI numa tela de verdade.
-- `com.printcher.Printcher.svg` — ícone placeholder (substituir por um
-  oficial quando tiver).
-
-As permissões (`finish-args`) do manifesto estão comentadas explicando o
-motivo de cada uma. Um ponto pendente identificado nessa revisão: o
-`autostart.rs` grava o `.desktop` com o caminho absoluto do binário
-(`std::env::current_exe()`), que não funciona de dentro do sandbox do
-Flatpak — o `Exec=` precisaria virar `flatpak run com.printcher.Printcher
---daemon`. Fica como ajuste pendente pra quando testarmos o build de
-verdade.
-
-### Licença
-
-GPLv3 (`LICENSE`) — qualquer trabalho derivado precisa continuar aberto,
-mas permite uso comercial (exigência do Flathub). Se quisesse restringir uso
-comercial, teria que abrir mão de submeter ao Flathub — foi essa a troca
-feita conscientemente.
-
-### Submissão ao Flathub
-
-Fica pra quando tivermos uma primeira versão validada de verdade. Falta,
-nessa hora: screenshots reais no metainfo, ícone oficial, corrigir o
-autostart pra sandbox, e passar pelo processo de revisão deles (PR num repo
-próprio + `flatpak-builder-lint` + revisão humana).
+Arquitetura, decisões técnicas, status detalhado por funcionalidade e
+processo de empacotamento estão em
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
