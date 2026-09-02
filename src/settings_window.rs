@@ -24,11 +24,14 @@ pub fn open_settings_window(
 ) {
     let cfg = config::load();
 
+    // Altura generosa o suficiente pra caber os 3 grupos (boas-vindas,
+    // atalho, geral) sem precisar rolar na primeira execução — com 320px
+    // (valor anterior) o grupo "Geral" ficava fora da área visível.
     let window = adw::PreferencesWindow::builder()
         .application(app)
         .title("Configurações — printcher")
         .default_width(480)
-        .default_height(320)
+        .default_height(480)
         .build();
 
     let page = adw::PreferencesPage::new();

@@ -75,12 +75,16 @@ cola de integração por natureza, não falta de testes.
   KStatusNotifierItem Support" (não vem por padrão no Fedora), o registro
   falha com `ServiceUnknown` e o daemon segue funcionando normalmente sem
   ícone. Nativo no KDE, sem extensão nenhuma.
-- 🚧 Tela de configurações (`src/settings_window.rs`, via libadwaita):
+- ✅ Tela de configurações (`src/settings_window.rs`, via libadwaita):
   implementada e validada de ponta a ponta via D-Bus/`pgrep` (primeira
   execução liga autostart sozinha, ícone de launcher abre/reaproveita o
-  daemon corretamente, encerramento limpo). O **conteúdo visual da janela e
-  o diálogo de confirmação ao fechar** ainda não foram vistos numa tela de
-  verdade.
+  daemon corretamente, encerramento limpo). **Conteúdo visual confirmado
+  por captura de tela**: banner de boas-vindas, grupo "Atalho de captura" e
+  grupo "Geral" com o switch de autostart todos renderizando corretamente.
+  Corrigido nessa checagem: a altura padrão da janela (320px) era baixa
+  demais pra caber os 3 grupos sem rolar — aumentada pra 480px. O diálogo
+  de confirmação ao fechar (Cancelar/Segundo plano/Encerrar) ainda não foi
+  clicado numa tela de verdade.
 - 🚧 Feedback pro usuário (`src/notify.rs`, banner de boas-vindas,
   `--uninstall-all`): implementado e testado sem tela (primeira execução,
   desinstalação completa). **Notificações e banner ainda não vistos
