@@ -153,18 +153,53 @@ cargo run --release -- --install-launcher
 cargo run --release -- --uninstall-launcher
 ```
 
-## Empacotamento (Flatpak)
+## Empacotamento (Flatpak) e preparação pro Flathub
 
-Manifesto em `flatpak/com.printcher.Printcher.json`, usando o runtime
-`org.gnome.Platform` 50 + extensão `rust-stable`. Ainda não testado (precisa
-de `flatpak-builder`, que baixa o runtime/SDK — vários GB). Pra buildar:
+Manifesto em `flatpak/com.printcher.Printcher.json` — App ID
+`com.printcher.Printcher` (domínio `printcher.com`, de propriedade do
+autor), runtime `org.gnome.Platform` 50 + extensão `rust-stable`. Build
+**100% offline**: as ~350 dependências do Rust já vêm vendorizadas dentro
+do próprio manifesto (geradas com o `flatpak-cargo-generator.py` oficial a
+partir do `Cargo.lock`), sem precisar de `--share=network`. Ainda não
+testado de verdade (precisa de `flatpak-builder`, que baixa o runtime/SDK —
+vários GB). Pra buildar:
 
 ```bash
 sudo dnf install flatpak-builder
 flatpak-builder --user --install build-dir flatpak/com.printcher.Printcher.json
 ```
 
-O build usa `--share=network` pra deixar o `cargo` baixar as dependências
-direto (mais simples pra uso pessoal). Uma submissão ao Flathub exigiria
-vendorizar as dependências via `flatpak-cargo-generator.py` pra build
-offline/reprodutível — não é o objetivo agora.
+Se alguma dependência mudar no `Cargo.toml`/`Cargo.lock`, as fontes
+vendorizadas no manifesto precisam ser regeradas (`flatpak-cargo-generator.py
+Cargo.lock -o cargo-sources.json`, depois mesclar no manifesto).
+
+Também tem, na pasta `flatpak/`:
+- `com.printcher.Printcher.desktop` — launcher instalado dentro do pacote
+  (diferente do `--install-launcher` local, que grava no host).
+- `com.printcher.Printcher.metainfo.xml` — metadados AppStream (nome,
+  descrição, changelog). **Falta adicionar screenshots reais** antes de
+  submeter — ainda não validamos a UI numa tela de verdade.
+- `com.printcher.Printcher.svg` — ícone placeholder (substituir por um
+  oficial quando tiver).
+
+As permissões (`finish-args`) do manifesto estão comentadas explicando o
+motivo de cada uma. Um ponto pendente identificado nessa revisão: o
+`autostart.rs` grava o `.desktop` com o caminho absoluto do binário
+(`std::env::current_exe()`), que não funciona de dentro do sandbox do
+Flatpak — o `Exec=` precisaria virar `flatpak run com.printcher.Printcher
+--daemon`. Fica como ajuste pendente pra quando testarmos o build de
+verdade.
+
+### Licença
+
+GPLv3 (`LICENSE`) — qualquer trabalho derivado precisa continuar aberto,
+mas permite uso comercial (exigência do Flathub). Se quisesse restringir uso
+comercial, teria que abrir mão de submeter ao Flathub — foi essa a troca
+feita conscientemente.
+
+### Submissão ao Flathub
+
+Fica pra quando tivermos uma primeira versão validada de verdade. Falta,
+nessa hora: screenshots reais no metainfo, ícone oficial, corrigir o
+autostart pra sandbox, e passar pelo processo de revisão deles (PR num repo
+próprio + `flatpak-builder-lint` + revisão humana).

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=printcher
+Comment=Captura de tela e anotação
+Exec=printcher --settings
+Icon=com.printcher.Printcher
+Terminal=false
+Categories=Graphics;

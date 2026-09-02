@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Ferramenta de screenshot/anotação para Linux (X11 + Wayland), inspirada no ShareX"
 repository = "https://github.com/davicolzer/printcher"
+license = "GPL-3.0-or-later"
 
 [[bin]]
 name = "printcher"

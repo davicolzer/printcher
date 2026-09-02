@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.printcher.Printcher</id>
+  <name>printcher</name>
+  <summary>Captura de tela e anotação para Linux</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <description>
+    <p>
+      printcher é uma ferramenta de captura de tela e anotação para Linux,
+      inspirada no ShareX, com suporte a X11 e Wayland (GNOME e KDE).
+    </p>
+    <p>Recursos:</p>
+    <ul>
+      <li>Captura de tela cheia via portal (Wayland) ou conexão direta (X11)</li>
+      <li>Editor de anotações: setas, retângulos, elipses, linhas, texto e recorte</li>
+      <li>Copiar para a área de transferência ou salvar em arquivo</li>
+      <li>Atalho de teclado global, configurável pela tela nativa do sistema</li>
+      <li>Ícone na bandeja do sistema, com menu rápido</li>
+      <li>Tela de configurações própria</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">com.printcher.Printcher.desktop</launchable>
+
+  <!--
+    TODO: adicionar screenshots reais (URLs estáveis, ex: hospedadas no
+    repositório do GitHub) antes de submeter ao Flathub. Ainda não
+    validamos a interface numa tela de verdade.
+  -->
+
+  <url type="homepage">https://github.com/davicolzer/printcher</url>
+  <url type="bugtracker">https://github.com/davicolzer/printcher/issues</url>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.1.0" date="2026-09-02">
+      <description>
+        <p>
+          Primeira versão: captura de tela, editor de anotações, execução
+          em segundo plano com atalho global e ícone na bandeja, e tela de
+          configurações.
+        </p>
+      </description>
+    </release>
+  </releases>
+
+  <developer id="com.printcher">
+    <name>Davi Colzer</name>
+  </developer>
+</component>
