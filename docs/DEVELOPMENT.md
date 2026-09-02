@@ -134,10 +134,18 @@ O atalho de teclado em si é registrado via
 `org.freedesktop.portal.GlobalShortcuts` (não via `gsettings` — isso
 funciona em qualquer desktop que implemente o portal, GNOME ou KDE). A tecla
 de fato é escolhida pelo usuário na UI de configuração do sistema, não
-fixada pelo app. **Importante:** esse portal exige que o processo tenha uma
-identidade de app reconhecida — rodando o binário direto (`cargo run`) ele
-falha com `An app id is required` e o daemon segue sem esse atalho (D-Bus e
-bandeja continuam funcionando). Isso só se resolve rodando como Flatpak.
+fixada pelo app — a gente só sugere um padrão (`PREFERRED_TRIGGER = "Print"`
+em `src/global_shortcut.rs`, tecla Print Screen), que o compositor pode
+usar como pré-preenchido na primeira configuração. É só uma sugestão: o
+compositor decide se usa, e mesmo assim mostra a tela de confirmação pro
+usuário (com aviso de conflito se o PrtScr já estiver em uso pela
+ferramenta de captura nativa, e opção de substituir). Não tem como pular
+essa confirmação nem desligar o atalho nativo por código — é assim que o
+portal funciona no Wayland, de propósito. **Importante:** esse portal exige
+que o processo tenha uma identidade de app reconhecida — rodando o binário
+direto (`cargo run`) ele falha com `An app id is required` e o daemon segue
+sem esse atalho (D-Bus e bandeja continuam funcionando). Isso só se resolve
+rodando como Flatpak.
 
 O ícone da bandeja (`src/tray.rs`, via `ksni`) sobe junto com o daemon, com
 um menu (Capturar agora / Configurar atalho / Sair). Se não houver um "host"

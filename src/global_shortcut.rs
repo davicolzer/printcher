@@ -5,6 +5,14 @@ use crate::daemon::DaemonEvent;
 
 const SHORTCUT_ID: &str = "capture";
 const SHORTCUT_DESCRIPTION: &str = "Capturar tela";
+// Sugestão de tecla padrão (Print Screen) pro compositor pré-preencher na
+// primeira configuração -- é só uma dica, não uma imposição: o compositor
+// decide se usa, e ainda mostra a tela de confirmação pro usuário (inclusive
+// avisando se PrtScr já está em uso pela ferramenta de captura nativa do
+// sistema, com opção de substituir). Não temos como pular essa confirmação
+// nem desligar o atalho nativo por código -- é assim que o portal funciona
+// no Wayland, de propósito.
+const PREFERRED_TRIGGER: &str = "Print";
 
 /// Registra o atalho global de captura via `org.freedesktop.portal.GlobalShortcuts`
 /// e fica escutando ativações, encaminhando-as pro canal de eventos do
@@ -18,7 +26,7 @@ pub async fn run(
     let portal = GlobalShortcuts::new().await?;
     let session = portal.create_session(Default::default()).await?;
 
-    let shortcuts = [NewShortcut::new(SHORTCUT_ID, SHORTCUT_DESCRIPTION)];
+    let shortcuts = [NewShortcut::new(SHORTCUT_ID, SHORTCUT_DESCRIPTION).preferred_trigger(PREFERRED_TRIGGER)];
     portal
         .bind_shortcuts(&session, &shortcuts, None, Default::default())
         .await?
