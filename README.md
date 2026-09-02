@@ -96,4 +96,5 @@ versão derivada precisa continuar aberta sob a mesma licença.
 
 Arquitetura, decisões técnicas, status detalhado por funcionalidade e
 processo de empacotamento estão em
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md). Histórico de mudanças em
+[`CHANGELOG.md`](CHANGELOG.md).
