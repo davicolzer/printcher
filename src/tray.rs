@@ -44,6 +44,15 @@ impl ksni::Tray for PrintcherTray {
                 ..Default::default()
             }
             .into(),
+            StandardItem {
+                label: "Configurações".into(),
+                icon_name: "preferences-system-symbolic".into(),
+                activate: Box::new(|this: &mut Self| {
+                    let _ = this.tx.send_blocking(DaemonEvent::OpenSettings);
+                }),
+                ..Default::default()
+            }
+            .into(),
             MenuItem::Separator,
             StandardItem {
                 label: "Sair".into(),

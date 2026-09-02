@@ -22,6 +22,12 @@ Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](htt
   KStatusNotifierItem Support" (não vem por padrão no Fedora), o registro
   falha com `ServiceUnknown` e o daemon segue funcionando normalmente sem
   ícone. Nativo no KDE, sem extensão nenhuma.
+- 🚧 M9 — Tela de configurações (`src/settings_window.rs`, via libadwaita):
+  implementada e validada de ponta a ponta via D-Bus/`pgrep` (primeira
+  execução liga autostart sozinha, ícone de launcher abre/reaproveita o
+  daemon corretamente, encerramento limpo). O **conteúdo visual da janela e
+  o diálogo de confirmação ao fechar** ainda não foram vistos numa tela de
+  verdade.
 - 🚧 Empacotamento (Flatpak): manifesto escrito, **build ainda não testado**
   (falta `flatpak-builder` e o download do runtime/SDK) — agora também
   pré-requisito real pro M7 funcionar
@@ -63,7 +69,8 @@ edição (crop, setas, formas) acontece localmente sobre essa imagem.
    nativa do sistema — funciona em qualquer desktop que implemente o portal
    (GNOME e KDE), não só GNOME**
 8. **M8 — Ícone na bandeja (StatusNotifierItem)**
-9. **Empacotamento (Flatpak)**
+9. **M9 — Tela de configurações, extensível pra novas opções**
+10. **Empacotamento (Flatpak)**
 
 A escolha de backend (`src/capture.rs`) é automática: se `WAYLAND_DISPLAY`
 estiver definida, usa o portal; senão, cai para a conexão X11 direta
@@ -79,10 +86,18 @@ de IPC próprio via D-Bus (`com.printcher.Printcher`):
 - `printcher` (sem argumentos): se já tem um daemon rodando, só pede pra ele
   capturar e sai na hora; senão, vira o daemon e já dispara uma captura
   inicial.
-- `printcher --daemon`: sobe o daemon sem capturar (usado pelo autostart).
+- `printcher --daemon`: sobe o daemon sem fazer nada além disso (usado pelo
+  autostart).
+- `printcher --settings`: se já tem daemon rodando, só abre a janela de
+  configurações nele; senão, sobe o daemon e já abre a janela (sem
+  capturar). É o comando usado pelo ícone do launcher.
 - `printcher --quit`: pede pro daemon rodando encerrar.
 - `printcher --configure-shortcut`: abre a UI nativa do sistema pra
   remapear o atalho de captura.
+
+Essas duas ações (`Capture` e `OpenSettings`) são tratadas de forma
+unificada em `daemon::run` via um enum `InitialAction` — "sobe o daemon se
+precisar, e dispara X" é a mesma lógica pros dois casos.
 
 O atalho de teclado em si é registrado via
 `org.freedesktop.portal.GlobalShortcuts` (não mais via `gsettings` — isso
@@ -103,6 +118,39 @@ Autostart (inicia o daemon junto com a sessão, sem capturar):
 ```bash
 cargo run --release -- --install-autostart
 cargo run --release -- --uninstall-autostart
+```
+
+## Tela de configurações
+
+`printcher --settings` (ou o ícone "Configurações" no menu da bandeja, ou o
+ícone do launcher) abre uma janela (`src/settings_window.rs`, libadwaita)
+com grupos de preferências independentes — pensada pra crescer: cada nova
+opção futura (pasta de destino, cor padrão de anotação, etc.) entra como um
+novo `PreferencesGroup`/linha, sem mexer no resto. Hoje tem:
+
+- **Atalho de captura**: botão que abre a UI nativa do sistema pra
+  remapear a tecla (mesmo mecanismo do `--configure-shortcut`).
+- **Geral → Iniciar com o sistema**: liga/desliga o autostart.
+
+As configurações ficam em `~/.config/printcher/config.toml`. Na primeira
+execução (nenhum config ainda existe), `start_on_login` já entra `true` por
+padrão e o autostart é registrado sozinho — não precisa de nenhum passo
+manual na instalação.
+
+Fechar a janela pergunta se você quer encerrar o printcher por completo ou
+deixá-lo em segundo plano (é isso que mantém o atalho global e a bandeja
+ativos) — a captura sempre continua funcionando enquanto o processo estiver
+de pé, então fechar a janela sem querer não desliga nada por engano.
+
+### Ícone no menu de aplicativos
+
+Diferente do autostart (oculto), esse aparece no launcher/menu de
+aplicativos de verdade. Clicar nele sobe o daemon se precisar e abre a
+janela de configurações (não captura):
+
+```bash
+cargo run --release -- --install-launcher
+cargo run --release -- --uninstall-launcher
 ```
 
 ## Empacotamento (Flatpak)

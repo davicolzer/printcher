@@ -3,7 +3,7 @@ use gtk::prelude::*;
 use zbus::fdo::{RequestNameFlags, RequestNameReply};
 use zbus::interface;
 
-use crate::{capture, editor, global_shortcut, tray};
+use crate::{capture, editor, global_shortcut, settings_window, tray};
 
 const BUS_NAME: &str = "com.printcher.Printcher";
 const OBJECT_PATH: &str = "/com/printcher/Printcher";
@@ -11,11 +11,13 @@ const INTERFACE_NAME: &str = "com.printcher.Printcher";
 const METHOD_CAPTURE: &str = "Capture";
 const METHOD_QUIT: &str = "Quit";
 const METHOD_CONFIGURE_SHORTCUT: &str = "ConfigureShortcut";
+const METHOD_OPEN_SETTINGS: &str = "OpenSettings";
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum DaemonEvent {
     Capture,
     Quit,
+    OpenSettings,
 }
 
 struct PrintcherService {
@@ -36,16 +38,44 @@ impl PrintcherService {
     async fn configure_shortcut(&self) {
         let _ = self.configure_tx.send(()).await;
     }
+
+    async fn open_settings(&self) {
+        let _ = self.tx.send(DaemonEvent::OpenSettings).await;
+    }
+}
+
+/// O que fazer assim que o daemon estiver pronto (ou o que pedir pra uma
+/// instância já existente), dependendo de como o printcher foi invocado.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum InitialAction {
+    Capture,
+    OpenSettings,
+}
+
+impl InitialAction {
+    fn dbus_method(self) -> &'static str {
+        match self {
+            InitialAction::Capture => METHOD_CAPTURE,
+            InitialAction::OpenSettings => METHOD_OPEN_SETTINGS,
+        }
+    }
+
+    fn daemon_event(self) -> DaemonEvent {
+        match self {
+            InitialAction::Capture => DaemonEvent::Capture,
+            InitialAction::OpenSettings => DaemonEvent::OpenSettings,
+        }
+    }
 }
 
 /// Roda o printcher como daemon de instância única.
 ///
-/// Se já existir uma instância ativa, apenas pede pra ela capturar (quando
-/// `initial_capture` for true) e retorna. Caso contrário, assume o papel de
-/// daemon, registra a interface D-Bus, liga o atalho global via portal,
-/// opcionalmente dispara uma captura inicial, e fica residente escutando
-/// eventos até ser encerrado.
-pub fn run(initial_capture: bool) -> anyhow::Result<()> {
+/// Se já existir uma instância ativa, apenas repassa `initial_action` pra
+/// ela (via D-Bus) e retorna. Caso contrário, assume o papel de daemon,
+/// registra a interface D-Bus, liga o atalho global via portal, dispara
+/// `initial_action` localmente, e fica residente escutando eventos até ser
+/// encerrado.
+pub fn run(initial_action: Option<InitialAction>) -> anyhow::Result<()> {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?;
@@ -55,11 +85,15 @@ pub fn run(initial_capture: bool) -> anyhow::Result<()> {
 
     let connection = runtime.block_on(become_primary(tx.clone(), configure_tx.clone()))?;
     let Some(connection) = connection else {
-        if initial_capture {
-            runtime.block_on(call_remote(METHOD_CAPTURE))?;
+        if let Some(action) = initial_action {
+            runtime.block_on(call_remote(action.dbus_method()))?;
         }
         return Ok(());
     };
+
+    // Primeira vez que o printcher roda de verdade nesta máquina: liga
+    // autostart por padrão (sem exigir que o usuário mexa em nada).
+    crate::config::load_or_init();
 
     // O atalho global (portal GlobalShortcuts) roda numa task própria do
     // runtime, em paralelo com o loop do GTK. Se o portal não estiver
@@ -75,7 +109,7 @@ pub fn run(initial_capture: bool) -> anyhow::Result<()> {
     // Ícone na bandeja (StatusNotifierItem). Sem host disponível (ex: GNOME
     // sem a extensão AppIndicator), só loga e segue sem ícone — o resto do
     // daemon funciona igual.
-    let tray_handle = match runtime.block_on(tray::spawn(tx.clone(), configure_tx)) {
+    let tray_handle = match runtime.block_on(tray::spawn(tx.clone(), configure_tx.clone())) {
         Ok(handle) => Some(handle),
         Err(e) => {
             eprintln!("Ícone da bandeja indisponível: {e}");
@@ -83,11 +117,11 @@ pub fn run(initial_capture: bool) -> anyhow::Result<()> {
         }
     };
 
-    if initial_capture {
-        tx.send_blocking(DaemonEvent::Capture)?;
+    if let Some(action) = initial_action {
+        tx.send_blocking(action.daemon_event())?;
     }
 
-    run_gtk_loop(runtime, connection, tray_handle, rx)
+    run_gtk_loop(runtime, connection, tray_handle, tx, configure_tx, rx)
 }
 
 /// Pede pra uma instância em execução encerrar. Não faz nada (silenciosamente)
@@ -157,6 +191,8 @@ fn run_gtk_loop(
     runtime: tokio::runtime::Runtime,
     connection: zbus::Connection,
     tray_handle: Option<ksni::Handle<tray::PrintcherTray>>,
+    tx: async_channel::Sender<DaemonEvent>,
+    configure_tx: async_channel::Sender<()>,
     rx: async_channel::Receiver<DaemonEvent>,
 ) -> anyhow::Result<()> {
     // NON_UNIQUE: a instância única já é garantida por nós mesmos (posse do
@@ -167,6 +203,12 @@ fn run_gtk_loop(
         .application_id("com.printcher.Printcher")
         .flags(gtk::gio::ApplicationFlags::NON_UNIQUE)
         .build();
+
+    // libadwaita precisa ser inicializado uma vez antes de usar seus widgets
+    // (adw::PreferencesWindow etc, usados na janela de configurações).
+    if let Err(e) = adw::init() {
+        eprintln!("Erro ao inicializar libadwaita: {e}");
+    }
 
     // Sem janela nenhuma aberta, o GApplication encerraria o loop principal
     // logo após o "activate". Esse guard mantém o processo vivo até
@@ -180,10 +222,17 @@ fn run_gtk_loop(
         let app = app.clone();
         let rx = rx.clone();
         let runtime_handle = runtime_handle.clone();
+        let tx = tx.clone();
+        let configure_tx = configure_tx.clone();
         glib::spawn_future_local(async move {
             while let Ok(event) = rx.recv().await {
                 match event {
                     DaemonEvent::Capture => handle_capture(&app, &runtime_handle).await,
+                    DaemonEvent::OpenSettings => settings_window::open_settings_window(
+                        &app,
+                        tx.clone(),
+                        configure_tx.clone(),
+                    ),
                     DaemonEvent::Quit => {
                         app.quit();
                         break;
