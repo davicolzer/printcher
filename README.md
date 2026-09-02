@@ -10,9 +10,19 @@ Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](htt
 - ✅ M3 — Copiar para a área de transferência, validado
 - 🚧 M4 — Backend X11: implementado e compilando, **ainda não testado em
   sessão X11 real** (só temos GNOME Wayland disponível até agora)
-- 🚧 M5 — Atalho global: implementado e validado via `gsettings`. Manifesto
-  Flatpak escrito, **build ainda não testado** (falta `flatpak-builder` e o
-  download do runtime/SDK)
+- ✅ M6 — Processo em segundo plano (daemon de instância única + autostart),
+  validado de ponta a ponta via D-Bus
+- 🚧 M7 — Atalho global via portal (`GlobalShortcuts`): implementado, degrada
+  graciosamente, mas **o atalho de tecla em si só funciona rodando como
+  Flatpak** (o portal exige identidade de app — rejeita o binário "cru" com
+  `An app id is required`). Capturar via D-Bus/tray continua funcionando
+  normalmente mesmo sem isso.
+- ⬜ M8 — Ícone na bandeja (StatusNotifierItem via `ksni`). No GNOME só
+  aparece com a extensão "AppIndicator and KStatusNotifierItem Support"
+  instalada (não vem por padrão no Fedora); nativo no KDE.
+- 🚧 Empacotamento (Flatpak): manifesto escrito, **build ainda não testado**
+  (falta `flatpak-builder` e o download do runtime/SDK) — agora também
+  pré-requisito real pro M7 funcionar
 
 ## Escopo
 
@@ -46,7 +56,12 @@ edição (crop, setas, formas) acontece localmente sobre essa imagem.
    ferramentas de crop, setas, formas e texto**
 4. **M3 — Copiar para a área de transferência**
 5. **M4 — Backend X11 (paridade com M1–M3)**
-6. **M5 — Atalho global e empacotamento**
+6. **M6 — Processo em segundo plano: daemon de instância única + autostart**
+7. **M7 — Atalho global via portal (`GlobalShortcuts`), configurável pela UI
+   nativa do sistema — funciona em qualquer desktop que implemente o portal
+   (GNOME e KDE), não só GNOME**
+8. **M8 — Ícone na bandeja (StatusNotifierItem)**
+9. **Empacotamento (Flatpak)**
 
 A escolha de backend (`src/capture.rs`) é automática: se `WAYLAND_DISPLAY`
 estiver definida, usa o portal; senão, cai para a conexão X11 direta
@@ -54,26 +69,35 @@ estiver definida, usa o portal; senão, cai para a conexão X11 direta
 Os dois caminhos produzem o mesmo PNG de saída, então o editor (M2) não
 precisa saber qual foi usado.
 
-## Atalho global
+## Processo em segundo plano e atalho global
 
-Sem daemon: o `printcher` é um binário comum, disparado pelo próprio GNOME
-quando o atalho é pressionado (não fica nada rodando em segundo plano). Pra
-registrar o atalho global (padrão `<Control><Super>p`):
+O `printcher` agora é um daemon de instância única, com um pequeno protocolo
+de IPC próprio via D-Bus (`com.printcher.Printcher`):
+
+- `printcher` (sem argumentos): se já tem um daemon rodando, só pede pra ele
+  capturar e sai na hora; senão, vira o daemon e já dispara uma captura
+  inicial.
+- `printcher --daemon`: sobe o daemon sem capturar (usado pelo autostart).
+- `printcher --quit`: pede pro daemon rodando encerrar.
+- `printcher --configure-shortcut`: abre a UI nativa do sistema pra
+  remapear o atalho de captura.
+
+O atalho de teclado em si é registrado via
+`org.freedesktop.portal.GlobalShortcuts` (não mais via `gsettings` — isso
+funciona em qualquer desktop que implemente o portal, GNOME ou KDE). A tecla
+de fato é escolhida pelo usuário na UI de configuração do sistema, não
+fixada pelo app. **Importante:** esse portal exige que o processo tenha uma
+identidade de app reconhecida — rodando o binário direto (`cargo run`) ele
+falha com `An app id is required` e o daemon segue sem esse atalho (D-Bus e,
+futuramente, a bandeja continuam funcionando). Isso só se resolve rodando
+como Flatpak.
+
+Autostart (inicia o daemon junto com a sessão, sem capturar):
 
 ```bash
-cargo run --release -- --install-shortcut
-# ou com um atalho customizado:
-cargo run --release -- --install-shortcut '<Shift><Super>p'
+cargo run --release -- --install-autostart
+cargo run --release -- --uninstall-autostart
 ```
-
-Pra remover:
-
-```bash
-cargo run --release -- --uninstall-shortcut
-```
-
-Comando idempotente — rodar de novo só atualiza o atalho/comando em vez de
-duplicar a entrada no GNOME.
 
 ## Empacotamento (Flatpak)
 

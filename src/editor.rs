@@ -66,25 +66,11 @@ struct AppState {
     drag_current: Option<Point>,
 }
 
-/// Abre o editor de captura (crop + anotações) sobre a imagem congelada.
-/// Bloqueia até a janela ser fechada.
-pub fn run_editor(image_path: PathBuf) -> anyhow::Result<()> {
-    let app = gtk::Application::builder()
-        .application_id("com.printcher.Printcher")
-        .build();
-
-    app.connect_activate(move |app| {
-        if let Err(e) = build_window(app, image_path.clone()) {
-            eprintln!("Erro ao abrir o editor: {e}");
-        }
-    });
-
-    // Não repassa os argumentos do processo para o GTK (não usamos CLI flags).
-    app.run_with_args::<&str>(&[]);
-    Ok(())
-}
-
-fn build_window(app: &gtk::Application, image_path: PathBuf) -> anyhow::Result<()> {
+/// Abre uma janela do editor de captura (crop + anotações) sobre a imagem
+/// congelada, associada à `Application` do daemon já em execução. Não
+/// bloqueia: a janela fica sob o controle do loop principal do GTK que já
+/// está rodando.
+pub fn open_editor_window(app: &gtk::Application, image_path: PathBuf) -> anyhow::Result<()> {
     let mut file = File::open(&image_path)?;
     let image = cairo::ImageSurface::create_from_png(&mut file)
         .map_err(|e| anyhow::anyhow!("falha ao carregar captura: {e:?}"))?;

@@ -1,17 +1,18 @@
+mod autostart;
 mod capture;
+mod daemon;
 mod editor;
-mod shortcut;
+mod global_shortcut;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
     match args.get(1).map(String::as_str) {
-        Some("--install-shortcut") => return shortcut::install(args.get(2).cloned()),
-        Some("--uninstall-shortcut") => return shortcut::uninstall(),
-        _ => {}
+        Some("--install-autostart") => autostart::install(),
+        Some("--uninstall-autostart") => autostart::uninstall(),
+        Some("--daemon") => daemon::run(false),
+        Some("--quit") => daemon::request_quit(),
+        Some("--configure-shortcut") => daemon::request_configure_shortcut(),
+        _ => daemon::run(true),
     }
-
-    let image_path = capture::capture_fullscreen().await?;
-    editor::run_editor(image_path)
 }
