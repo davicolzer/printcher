@@ -1,6 +1,27 @@
 # printcher
 
-Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](https://getsharex.com/), com suporte planejado para X11 e Wayland (foco de testes: Fedora + GNOME Wayland).
+Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](https://getsharex.com/), com suporte a X11 e Wayland (foco de testes: Fedora + GNOME Wayland).
+
+## Como buildar
+
+Pré-requisitos (Fedora):
+
+```bash
+sudo dnf install rustup gtk4-devel libadwaita-devel dbus-devel \
+    libxcb-devel libX11-devel libXrandr-devel libXfixes-devel
+rustup-init -y --default-toolchain stable --profile default
+```
+
+Em outras distros, o nome dos pacotes muda (`apt`: `libgtk-4-dev`,
+`libadwaita-1-dev`, `libdbus-1-dev`, `libxcb-dev`, `libx11-dev`,
+`libxrandr-dev`, `libxfixes-dev`), mas a ideia é a mesma. O Rust em si
+(`rustup`) é igual em qualquer distro.
+
+```bash
+git clone https://github.com/davicolzer/printcher.git
+cd printcher
+cargo build --release
+```
 
 ## Status
 
