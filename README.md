@@ -89,8 +89,8 @@ com o sistema.
 
 ## Licença
 
-[GPLv3](LICENSE) — o código é livre pra usar e modificar, mas qualquer
-versão derivada precisa continuar aberta sob a mesma licença.
+Software proprietário — veja [`LICENSE`](LICENSE). Todos os direitos
+reservados; uso, cópia e redistribuição não autorizados são proibidos.
 
 ## Para desenvolvedores
 

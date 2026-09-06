@@ -14,8 +14,15 @@ pub async fn capture_fullscreen() -> anyhow::Result<PathBuf> {
         .response()?;
 
     let source_path = uri_to_path(response.uri().as_str())?;
-    let dest_path = super::dest_path()?;
-    std::fs::copy(&source_path, &dest_path)?;
+    let dest_path = super::temp_capture_path()?;
+    // Não usamos std::fs::copy: ela também copia os bits de permissão da
+    // origem, e o arquivo temporário do portal (montado via document portal
+    // do Flatpak) costuma ser somente leitura -- isso deixaria a captura
+    // final sem permissão de escrita, quebrando o Salvar do editor depois.
+    // Ler e escrever de novo usa o modo padrão do processo (respeitando o
+    // umask), sempre gravável.
+    let bytes = std::fs::read(&source_path)?;
+    std::fs::write(&dest_path, bytes)?;
 
     Ok(dest_path)
 }

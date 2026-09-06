@@ -14,6 +14,15 @@ mod tray;
 use daemon::InitialAction;
 
 fn main() -> anyhow::Result<()> {
+    // Em algumas máquinas o renderizador Vulkan do GTK4 falha silenciosamente
+    // (janela criada e "visível", mas nunca desenha nada na tela --
+    // `vkAcquireNextImageKHR` retornando VK_ERROR_OUT_OF_DATE_KHR). OpenGL é
+    // mais amplamente suportado e não tem esse problema; só força se o
+    // usuário não tiver uma preferência própria já setada.
+    if std::env::var_os("GSK_RENDERER").is_none() {
+        std::env::set_var("GSK_RENDERER", "gl");
+    }
+
     let args: Vec<String> = std::env::args().collect();
 
     match args.get(1).map(String::as_str) {
@@ -26,7 +35,7 @@ fn main() -> anyhow::Result<()> {
         Some("--quit") => daemon::request_quit(),
         Some("--configure-shortcut") => daemon::request_configure_shortcut(),
         Some("--settings") => daemon::run(Some(InitialAction::OpenSettings)),
-        _ => daemon::run(Some(InitialAction::Capture)),
+        _ => daemon::run_default(),
     }
 }
 

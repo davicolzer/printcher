@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use adw::prelude::*;
 use gtk::glib;
 
@@ -21,7 +24,15 @@ pub fn open_settings_window(
     tx: async_channel::Sender<DaemonEvent>,
     configure_shortcut_tx: async_channel::Sender<()>,
     is_first_run: bool,
+    window_slot: &Rc<RefCell<Option<adw::PreferencesWindow>>>,
 ) {
+    // Já tem uma janela de configurações aberta: só traz ela pra frente em
+    // vez de abrir uma segunda.
+    if let Some(existing) = window_slot.borrow().as_ref() {
+        existing.present();
+        return;
+    }
+
     let cfg = config::load();
 
     // Altura generosa o suficiente pra caber os 3 grupos (boas-vindas,
@@ -40,6 +51,7 @@ pub fn open_settings_window(
     if is_first_run {
         page.add(&welcome_group());
     }
+    page.add(&capture_group(tx.clone()));
     page.add(&shortcut_group(configure_shortcut_tx));
     page.add(&general_group(cfg.start_on_login));
 
@@ -53,6 +65,18 @@ pub fn open_settings_window(
         });
         glib::Propagation::Stop
     });
+
+    // Limpa o slot quando a janela for destruída -- seja pelo fluxo normal
+    // (confirm_close chamando window.destroy()) ou por um destroy() direto
+    // vindo de fora (ex: daemon.rs fechando a janela de configurações
+    // automaticamente ao iniciar uma captura).
+    {
+        let window_slot_for_destroy = window_slot.clone();
+        window.connect_destroy(move |_| {
+            window_slot_for_destroy.borrow_mut().take();
+        });
+        *window_slot.borrow_mut() = Some(window.clone());
+    }
 
     window.present();
 }
@@ -92,6 +116,41 @@ fn welcome_group() -> adw::PreferencesGroup {
         .title("Bem-vindo ao printcher!")
         .description("Configure seu atalho de captura logo abaixo pra começar a usar.")
         .build()
+}
+
+/// Grupo "Captura": um botão que dispara a captura de dentro da própria
+/// janela de Configurações (já em foco). Existe principalmente pra dar ao
+/// portal de Screenshot uma primeira chance de mostrar o diálogo de
+/// permissão — o GNOME só permite esse diálogo quando o app pedindo está em
+/// foco, o que nunca é o caso quando a captura é disparada pelo atalho
+/// global (o printcher roda em segundo plano, sem janela nenhuma). Depois
+/// que a permissão é concedida uma vez por aqui, capturas via atalho global
+/// passam a funcionar normalmente.
+fn capture_group(tx: async_channel::Sender<DaemonEvent>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title("Captura")
+        .description("Use este botão na primeira vez, pra conceder a permissão de captura de tela")
+        .build();
+
+    let row = adw::ActionRow::builder()
+        .title("Capturar agora")
+        .subtitle("Dispara uma captura com esta janela em foco")
+        .activatable(true)
+        .build();
+
+    let capture_btn = gtk::Button::builder()
+        .label("Capturar")
+        .valign(gtk::Align::Center)
+        .build();
+    capture_btn.connect_clicked(move |_| {
+        let _ = tx.send_blocking(DaemonEvent::Capture);
+    });
+
+    row.add_suffix(&capture_btn);
+    row.set_activatable_widget(Some(&capture_btn));
+    group.add(&row);
+
+    group
 }
 
 /// Grupo "Atalho de captura": a tecla em si é configurada pela UI nativa do

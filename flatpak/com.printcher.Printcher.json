@@ -1,5 +1,4 @@
 {
-    // Reverso do domínio printcher.com, que o autor possui.
     "app-id": "com.printcher.Printcher",
     "runtime": "org.gnome.Platform",
     "runtime-version": "50",
@@ -9,39 +8,22 @@
     ],
     "command": "printcher",
     "finish-args": [
-        // Renderização da UI (GTK4): Wayland nativo, com X11 como
-        // alternativa (também usado pelo backend de captura X11, src/capture/x11.rs).
         "--socket=wayland",
         "--socket=fallback-x11",
         "--share=ipc",
 
-        // Aceleração de GPU pro GTK4/cairo (evita fallback pra software rendering).
         "--device=dri",
 
-        // Fala com o xdg-desktop-portal: captura de tela (Screenshot,
-        // src/capture/wayland.rs) e atalho global (GlobalShortcuts,
-        // src/global_shortcut.rs) passam pelo mesmo dispatcher.
         "--talk-name=org.freedesktop.portal.Desktop",
 
-        // Registro do ícone na bandeja via StatusNotifierItem (src/tray.rs, ksni).
         "--talk-name=org.kde.StatusNotifierWatcher",
 
-        // Onde os screenshots são salvos (src/capture.rs).
         "--filesystem=xdg-pictures/printcher:create",
 
-        // Onde src/autostart.rs escreve o .desktop de início automático.
-        // NOTA (pendente): dentro do Flatpak, o Exec desse .desktop precisa
-        // virar "flatpak run com.printcher.Printcher --daemon" em vez do
-        // caminho interno do binário -- autostart.rs ainda usa
-        // std::env::current_exe(), que não funciona assim de fora do
-        // sandbox. Ajustar quando testarmos o build de verdade.
         "--filesystem=xdg-config/autostart:create"
     ],
     "build-options": {
         "append-path": "/usr/lib/sdk/rust-stable/bin",
-        // Aponta o cargo pro diretório vendorizado (extraído a partir das
-        // fontes "cargo/vendor/..." abaixo) em vez de crates.io -- build
-        // 100% offline, sem "--share=network".
         "env": {
             "CARGO_HOME": "/run/build/printcher/cargo"
         }
@@ -53,9 +35,9 @@
             "build-commands": [
                 "cargo build --release --frozen",
                 "install -Dm755 target/release/printcher /app/bin/printcher",
-                "install -Dm644 ../com.printcher.Printcher.desktop /app/share/applications/com.printcher.Printcher.desktop",
-                "install -Dm644 ../com.printcher.Printcher.metainfo.xml /app/share/metainfo/com.printcher.Printcher.metainfo.xml",
-                "install -Dm644 ../com.printcher.Printcher.svg /app/share/icons/hicolor/scalable/apps/com.printcher.Printcher.svg"
+                "install -Dm644 flatpak/com.printcher.Printcher.desktop /app/share/applications/com.printcher.Printcher.desktop",
+                "install -Dm644 flatpak/com.printcher.Printcher.metainfo.xml /app/share/metainfo/com.printcher.Printcher.metainfo.xml",
+                "install -Dm644 flatpak/com.printcher.Printcher.svg /app/share/icons/hicolor/scalable/apps/com.printcher.Printcher.svg"
             ],
             "sources": [
                 {

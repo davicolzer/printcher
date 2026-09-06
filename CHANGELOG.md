@@ -33,7 +33,7 @@ versão for validada e marcada com tag.
 - Preparação para empacotamento via Flatpak: manifesto com build 100%
   offline (dependências vendorizadas), metadados AppStream, ícone
   placeholder, permissões revisadas.
-- Licença GPLv3.
+- Licença proprietária (todos os direitos reservados).
 
 ### Limitações conhecidas
 

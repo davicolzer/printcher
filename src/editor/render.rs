@@ -57,7 +57,6 @@ pub(super) enum Annotation {
 
 pub(super) struct AppState {
     pub(super) image: cairo::ImageSurface,
-    pub(super) image_path: PathBuf,
     pub(super) tool: Tool,
     pub(super) color: Color,
     pub(super) stroke_width: f64,
@@ -220,7 +219,6 @@ mod tests {
     fn blank_state(image: cairo::ImageSurface) -> AppState {
         AppState {
             image,
-            image_path: PathBuf::from("/tmp/printcher-test.png"),
             tool: Tool::Select,
             color: (1.0, 0.0, 0.0),
             stroke_width: 6.0,

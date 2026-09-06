@@ -23,7 +23,7 @@ pub fn capture_fullscreen() -> anyhow::Result<PathBuf> {
     let msb_first = conn.setup().image_byte_order == ImageOrder::MSB_FIRST;
     let rgba = to_rgba_image(&reply.data, width, height, msb_first);
 
-    let dest_path = super::dest_path()?;
+    let dest_path = super::temp_capture_path()?;
     rgba.save(&dest_path)?;
 
     Ok(dest_path)

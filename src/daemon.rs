@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use gtk::glib;
 use gtk::prelude::*;
 use zbus::fdo::{RequestNameFlags, RequestNameReply};
@@ -76,6 +79,24 @@ impl InitialAction {
 /// `initial_action` localmente, e fica residente escutando eventos até ser
 /// encerrado.
 pub fn run(initial_action: Option<InitialAction>) -> anyhow::Result<()> {
+    run_with(initial_action, initial_action)
+}
+
+/// Invocação sem nenhuma flag (ex: rodar `printcher` puro no terminal, ou
+/// vincular o binário direto a um atalho de teclado do sistema). Se já
+/// existe um daemon rodando, repassa como pedido de captura -- é o que
+/// permite usar o binário cru como "atirar e esquecer" num atalho global.
+/// Se não existe nenhum ainda, só sobe o daemon e fica ouvindo em segundo
+/// plano: capturar imediatamente na primeiríssima execução pegava o usuário
+/// de surpresa (ex: testando o binário, ou clicando duas vezes por engano).
+pub fn run_default() -> anyhow::Result<()> {
+    run_with(None, Some(InitialAction::Capture))
+}
+
+/// `on_start` roda quando este processo assume o papel de daemon (primeira
+/// instância); `on_forward` é o método D-Bus repassado quando já existe uma
+/// instância rodando.
+fn run_with(on_start: Option<InitialAction>, on_forward: Option<InitialAction>) -> anyhow::Result<()> {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?;
@@ -85,7 +106,7 @@ pub fn run(initial_action: Option<InitialAction>) -> anyhow::Result<()> {
 
     let connection = runtime.block_on(become_primary(tx.clone(), configure_tx.clone()))?;
     let Some(connection) = connection else {
-        if let Some(action) = initial_action {
+        if let Some(action) = on_forward {
             runtime.block_on(call_remote(action.dbus_method()))?;
         }
         return Ok(());
@@ -118,7 +139,7 @@ pub fn run(initial_action: Option<InitialAction>) -> anyhow::Result<()> {
         }
     };
 
-    if let Some(action) = initial_action {
+    if let Some(action) = on_start {
         tx.send_blocking(action.daemon_event())?;
     }
 
@@ -188,6 +209,10 @@ async fn call_remote(method: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+// `adw::PreferencesWindow` está depreciada desde libadwaita 1.6 (ver o
+// mesmo `#[allow(deprecated)]` em settings_window.rs) -- só rastreamos o
+// tipo aqui, sem instanciar nada, então esse allow cobre os dois usos.
+#[allow(deprecated)]
 fn run_gtk_loop(
     runtime: tokio::runtime::Runtime,
     connection: zbus::Connection,
@@ -220,21 +245,34 @@ fn run_gtk_loop(
 
     let runtime_handle = runtime.handle().clone();
 
+    // Rastreiam a janela do editor e a de configurações atualmente abertas
+    // (no máximo uma de cada). Usadas pra evitar duas janelas do editor
+    // vivas ao mesmo tempo (a mais nova ficava sem foco, escondida atrás da
+    // mais antiga) e pra fechar a janela de configurações automaticamente
+    // ao iniciar uma captura, já que ela competia por foco com o editor.
+    let editor_window: Rc<RefCell<Option<gtk::ApplicationWindow>>> = Rc::new(RefCell::new(None));
+    let settings_window_ref: Rc<RefCell<Option<adw::PreferencesWindow>>> = Rc::new(RefCell::new(None));
+
     app.connect_activate(move |app| {
         let app = app.clone();
         let rx = rx.clone();
         let runtime_handle = runtime_handle.clone();
         let tx = tx.clone();
         let configure_tx = configure_tx.clone();
+        let editor_window = editor_window.clone();
+        let settings_window_ref = settings_window_ref.clone();
         glib::spawn_future_local(async move {
             while let Ok(event) = rx.recv().await {
                 match event {
-                    DaemonEvent::Capture => handle_capture(&app, &runtime_handle).await,
+                    DaemonEvent::Capture => {
+                        handle_capture(&app, &runtime_handle, &editor_window, &settings_window_ref).await
+                    }
                     DaemonEvent::OpenSettings => settings_window::open_settings_window(
                         &app,
                         tx.clone(),
                         configure_tx.clone(),
                         is_first_run,
+                        &settings_window_ref,
                     ),
                     DaemonEvent::Quit => {
                         app.quit();
@@ -255,7 +293,31 @@ fn run_gtk_loop(
     Ok(())
 }
 
-async fn handle_capture(app: &gtk::Application, handle: &tokio::runtime::Handle) {
+#[allow(deprecated)]
+async fn handle_capture(
+    app: &gtk::Application,
+    handle: &tokio::runtime::Handle,
+    editor_window: &Rc<RefCell<Option<gtk::ApplicationWindow>>>,
+    settings_window_ref: &Rc<RefCell<Option<adw::PreferencesWindow>>>,
+) {
+    // Fecha a janela de configurações se estiver aberta: ela competia por
+    // foco com a nova janela do editor (era isso que deixava a edição sem
+    // resposta a partir da segunda captura, com o Esc chegando a acionar o
+    // diálogo de fechar da própria janela de configurações). `destroy()`
+    // direto pula o diálogo de confirmação "segundo plano/encerrar" -- não
+    // faz sentido perguntar isso só porque uma captura começou.
+    // Não dá pra fazer isso num `if let` só: o `RefMut` de `borrow_mut()`
+    // fica vivo até o fim do bloco (extensão de tempo de vida de
+    // temporários em `if let`), e `settings.destroy()` dispara o sinal
+    // "destroy" na hora, que roda o `connect_destroy` de settings_window.rs
+    // -- que tenta pegar emprestado esse mesmo RefCell de novo, e explode
+    // com "RefCell already borrowed". Separar em duas linhas solta o
+    // empréstimo antes do destroy.
+    let settings = settings_window_ref.borrow_mut().take();
+    if let Some(settings) = settings {
+        settings.destroy();
+    }
+
     let (result_tx, result_rx) = async_channel::bounded(1);
     handle.spawn(async move {
         let result = capture::capture_fullscreen().await;
@@ -264,7 +326,7 @@ async fn handle_capture(app: &gtk::Application, handle: &tokio::runtime::Handle)
 
     match result_rx.recv().await {
         Ok(Ok(path)) => {
-            if let Err(e) = editor::open_editor_window(app, path, handle.clone()) {
+            if let Err(e) = editor::open_editor_window(app, path, handle.clone(), editor_window) {
                 eprintln!("Erro ao abrir o editor: {e}");
                 notify_error(handle, "capture-error", "Não foi possível abrir o editor", &e);
             }

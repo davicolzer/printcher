@@ -228,10 +228,10 @@ verdade.
 
 ### Licença
 
-GPLv3 (`LICENSE`) — qualquer trabalho derivado precisa continuar aberto,
-mas permite uso comercial (exigência do Flathub). Se quisesse restringir uso
-comercial, teria que abrir mão de submeter ao Flathub — foi essa a troca
-feita conscientemente.
+Proprietária (`LICENSE`) — todos os direitos reservados. O Flathub aceita
+apps de código fechado normalmente (o binário final é redistribuído por
+eles, o manifesto de build fica público, mas o código-fonte não precisa
+ficar); o metainfo declara `LicenseRef-proprietary`.
 
 ### Submissão ao Flathub
 
