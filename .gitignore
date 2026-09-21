@@ -1,5 +1,7 @@
 /target
 /build-dir
 /.flatpak-builder
+/repo
+*.flatpak
 tarpaulin-report.html
 cobertura.xml
