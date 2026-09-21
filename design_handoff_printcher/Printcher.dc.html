@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cantarell:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#150f14}
+  a{color:#7E3E7C;text-decoration:none}
+  a:hover{color:#5D2456}
+  button{font-family:inherit;cursor:pointer}
+  input{font-family:inherit}
+  @font-face{font-family:'OpenDyslexic';font-style:normal;font-weight:400;font-display:swap;src:url(https://cdn.jsdelivr.net/fontsource/fonts/opendyslexic@latest/latin-400-normal.woff2) format('woff2'),url(https://cdn.jsdelivr.net/fontsource/fonts/opendyslexic@latest/latin-400-normal.woff) format('woff')}
+  @font-face{font-family:'OpenDyslexic';font-style:normal;font-weight:700;font-display:swap;src:url(https://cdn.jsdelivr.net/fontsource/fonts/opendyslexic@latest/latin-700-normal.woff2) format('woff2'),url(https://cdn.jsdelivr.net/fontsource/fonts/opendyslexic@latest/latin-700-normal.woff) format('woff')}
+  @keyframes pcFlash{0%{opacity:0}14%{opacity:.9}100%{opacity:0}}
+  @keyframes pcRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @keyframes pcPop{from{opacity:0;transform:translateY(-6px) scale(.985)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<div data-screen-label="Área de trabalho" style="position:relative;width:100%;height:100vh;min-height:0;overflow:hidden;--pc-font:{{ fontStack }};font-family:var(--pc-font,Cantarell,system-ui,sans-serif);color:#241715;background:radial-gradient(120% 90% at 22% 8%, #4A2A45 0%, #2E1B2B 55%, #1D121C 100%);user-select:none">
+
+  <div style="position:absolute;left:-8%;bottom:-18%;width:52%;height:60%;border-radius:50%;background:rgba(252,208,234,0.07)"></div>
+  <div style="position:absolute;right:-6%;top:18%;width:34%;height:44%;border-radius:50%;background:rgba(229,134,53,0.06)"></div>
+
+  <div style="position:absolute;left:0;right:0;top:0;height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:rgba(10,6,10,0.62);backdrop-filter:blur(12px);color:rgba(255,255,255,0.92);font-size:12.5px;z-index:30">
+    <div style="display:flex;gap:16px;align-items:center">
+      <span style="font-weight:700">Atividades</span>
+      <span style="opacity:0.6">Terminal</span>
+    </div>
+    <span style="opacity:0.92;font-variant-numeric:tabular-nums">{{ clock }}</span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span style="opacity:0.6;font-size:11.5px;letter-spacing:0.04em">PT</span>
+      <button onClick="{{ toggleTray }}" title="printcher" style="display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:50%;background:transparent">
+        <img src="assets/printcher-mascot.svg" alt="printcher" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:block" />
+      </button>
+    </div>
+  </div>
+
+  <sc-if value="{{ trayOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:10px;top:40px;width:236px;padding:6px;border-radius:14px;background:#FCFAFB;box-shadow:0 18px 44px rgba(0,0,0,0.45);z-index:35;animation:pcPop .14s ease-out">
+      <div style="display:flex;align-items:center;gap:9px;padding:8px 10px 10px">
+        <img src="assets/printcher-mascot.svg" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover" />
+        <div>
+          <div style="font-size:13px;font-weight:700">printcher</div>
+          <div style="font-size:11px;color:#8A7A82">em segundo plano</div>
+        </div>
+      </div>
+      <div style="height:1px;background:#EDE3E9;margin:0 4px 6px"></div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <button onClick="{{ capture }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:0;border-radius:8px;background:transparent;font-size:13px;color:#241715;text-align:left" style-hover="background:#F6EAF4">
+          <span>Capturar agora</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A7A82">{{ cfg.full }}</span>
+        </button>
+        <button onClick="{{ openSettings }}" style="padding:8px 10px;border:0;border-radius:8px;background:transparent;font-size:13px;color:#241715;text-align:left" style-hover="background:#F6EAF4">Configurações…</button>
+        <button onClick="{{ openHistory }}" style="padding:8px 10px;border:0;border-radius:8px;background:transparent;font-size:13px;color:#241715;text-align:left" style-hover="background:#F6EAF4">Histórico de capturas</button>
+        <div style="height:1px;background:#EDE3E9;margin:5px 4px"></div>
+        <button onClick="{{ closeTray }}" style="padding:8px 10px;border:0;border-radius:8px;background:transparent;font-size:13px;color:#8A7A82;text-align:left" style-hover="background:#F6EAF4">Encerrar</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:absolute;left:5%;top:88px;width:min(520px,44%);height:242px;border-radius:12px;overflow:hidden;background:#1A1119;box-shadow:0 26px 60px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.08)">
+    <div style="display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 10px;background:#241A22;color:rgba(255,255,255,0.72);font-size:12px">
+      <span>davi@fedora:~/dev/printcher</span>
+      <div style="display:flex;gap:6px">
+        <span style="width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,0.18);display:block"></span>
+        <span style="width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,0.18);display:block"></span>
+      </div>
+    </div>
+    <div style="padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.85;color:#D8CBD3">
+      <div><span style="color:#FCD0EA">$</span> cargo build --release</div>
+      <div style="color:#9CE8B4">   Compiling printcher v0.1.0</div>
+      <div style="color:#8A7A82">    Finished `release` profile in 24.31s</div>
+      <div><span style="color:#FCD0EA">$</span> ./target/release/printcher --settings</div>
+      <div style="color:#8A7A82">    janela de configurações aberta</div>
+      <div><span style="color:#FCD0EA">$</span> <span style="border-bottom:2px solid #E58635">&nbsp;</span></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;right:5%;top:210px;width:min(420px,38%);height:266px;border-radius:12px;overflow:hidden;background:#FCFAFB;box-shadow:0 26px 60px rgba(0,0,0,0.45)">
+    <div style="display:flex;align-items:center;gap:10px;height:38px;padding:0 12px;background:#F2EAEF;font-size:12.5px;font-weight:700;color:#3C2A34">
+      <span style="opacity:0.55">Imagens</span>
+      <span style="opacity:0.35">›</span>
+      <span>printcher</span>
+    </div>
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ history }}" as="h" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;font-size:12px;color:#3C2A34">
+          <span style="width:26px;height:20px;border-radius:4px;background:linear-gradient(140deg,#E9C6E4,#C994C4);display:block;flex:none"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.name }}</span>
+          <span style="margin-left:auto;color:#9C8B93;font-size:11px;flex:none">{{ h.when }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Configurações" style="--pc-bg:{{ th.bg }};--pc-fg:{{ th.fg }};--pc-head:{{ th.head }};--pc-headline:{{ th.headLine }};--pc-card:{{ th.card }};--pc-line:{{ th.line }};--pc-rowline:{{ th.rowLine }};--pc-sub:{{ th.sub }};--pc-label:{{ th.label }};--pc-input:{{ th.input }};--pc-inputline:{{ th.inputLine }};--pc-note:{{ th.note }};--pc-notefg:{{ th.noteFg }};--pc-chip:{{ th.chip }};--pc-accent:{{ th.accent }};--pc-onaccent:{{ th.onAccent }};--pc-off:{{ th.off }};--pc-link:{{ th.link }};--pc-mono:{{ th.mono }};--pc-hover:{{ th.hover }};position:absolute;left:50%;top:52px;transform:translateX(-50%);width:min(560px,92%);max-height:calc(100% - 96px);display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:var(--pc-bg,#FCFAFB);color:var(--pc-fg,#241715);box-shadow:0 34px 80px rgba(0,0,0,0.55);z-index:32;animation:pcPop .16s ease-out">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--pc-head,#F6EAF4);border-bottom:1px solid var(--pc-headline,#E9D8E6)">
+        <img src="assets/printcher-mascot.svg" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none" />
+        <div style="display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--pc-chip,rgba(126,62,124,0.09))">
+          <button onClick="{{ openSettings }}" style="padding:5px 13px;border:0;border-radius:7px;font-size:12.5px;font-weight:700;background:{{ tabCfgBg }};color:{{ tabCfgFg }}">Configurações</button>
+          <button onClick="{{ openHistory }}" style="padding:5px 13px;border:0;border-radius:7px;font-size:12.5px;font-weight:700;background:{{ tabHistBg }};color:{{ tabHistFg }}">Histórico</button>
+        </div>
+        <button onClick="{{ closeSettings }}" title="Fechar" style="margin-left:auto;width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:var(--pc-chip,rgba(36,23,21,0.06));color:var(--pc-notefg,#5D4A54)" style-hover="background:var(--pc-hover,rgba(36,23,21,0.12))">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+
+      <div style="padding:18px 20px 22px;overflow:auto;display:flex;flex-direction:column;gap:20px">
+        <sc-if value="{{ isCfgTab }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:20px">
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--pc-label,#8E4C8C)">Atalhos de captura</div>
+              <div style="border:1px solid var(--pc-line,#E9DDE5);border-radius:12px;overflow:hidden;background:var(--pc-card,#fff)">
+                <sc-for list="{{ shortcuts }}" as="s" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--pc-rowline,#F1E8ED)">
+                    <div style="min-width:0">
+                      <div style="font-size:13px;font-weight:700">{{ s.title }}</div>
+                      <div style="font-size:11.5px;color:var(--pc-sub,#8A7A82)">{{ s.sub }}</div>
+                    </div>
+                    <button onClick="{{ s.onClick }}" style="margin-left:auto;flex:none;padding:6px 12px;border:1px solid {{ s.border }};border-radius:8px;background:{{ s.bg }};color:{{ s.fg }};font-family:'JetBrains Mono',monospace;font-size:11.5px">{{ s.keys }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--pc-label,#8E4C8C)">Destino</div>
+              <div style="border:1px solid var(--pc-line,#E9DDE5);border-radius:12px;background:var(--pc-card,#fff)">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px">
+                  <div style="min-width:0">
+                    <div style="font-size:13px;font-weight:700">Pasta das capturas</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--pc-sub,#8A7A82);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cfg.folder }}</div>
+                  </div>
+                  <button onClick="{{ pickFolder }}" style="margin-left:auto;flex:none;padding:6px 12px;border:1px solid var(--pc-inputline,#E0CFDC);border-radius:8px;background:var(--pc-input,#FCFAFB);font-size:12px;color:var(--pc-fg,#4A2E44)">Escolher…</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--pc-rowline,#F1E8ED)">
+                  <div style="font-size:13px;font-weight:700">Formato</div>
+                  <div style="margin-left:auto;display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--pc-chip,rgba(36,23,21,0.05))">
+                    <sc-for list="{{ formats }}" as="f" hint-placeholder-count="3">
+                      <button onClick="{{ f.onClick }}" style="padding:5px 12px;border:0;border-radius:7px;font-size:12px;font-weight:700;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="padding:11px 14px;border-top:1px solid var(--pc-rowline,#F1E8ED);display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="font-size:13px;font-weight:700">Padrão de nome do arquivo</div>
+                    <button onClick="{{ toggleTokens }}" style="margin-left:auto;display:flex;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:var(--pc-link,#7E3E7C);font-size:11.5px;font-weight:700" style-hover="opacity:0.75">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14" style="opacity:{{ helpPlus }}"></path></svg>
+                      <span style="text-decoration:underline;text-decoration-color:currentColor;text-underline-offset:2px">{{ helpHint }}</span>
+                    </button>
+                  </div>
+                  <input value="{{ cfg.pattern }}" onChange="{{ onPattern }}" spellcheck="false" style="width:100%;padding:8px 10px;border:1px solid var(--pc-inputline,#E0CFDC);border-radius:8px;background:var(--pc-input,#FCFAFB);font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--pc-fg,#241715);outline:none" style-focus="border-color:var(--pc-accent,#B078AD)" />
+                  <div style="font-size:11px;color:var(--pc-sub,#8A7A82)">Fica assim: <span style="font-family:'JetBrains Mono',monospace;color:var(--pc-mono,#5D4A54)">{{ namePreview }}</span></div>
+                  <sc-if value="{{ tokensOpen }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:9px;padding:11px 12px;border-radius:10px;background:var(--pc-note,#F6EAF4);animation:pcPop .12s ease-out">
+                      <div style="font-size:11.5px;color:var(--pc-notefg,#5D4A54);line-height:1.5">Toque em um código para inserir no padrão. O resto do texto é mantido como você escrever.</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:5px">
+                        <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="6">
+                          <button onClick="{{ t.onClick }}" title="{{ t.label }}" style="display:flex;align-items:baseline;gap:6px;padding:5px 9px;border:1px solid var(--pc-inputline,#E3CFDF);border-radius:7px;background:var(--pc-card,#fff)" style-hover="border-color:var(--pc-accent,#B078AD)">
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500;color:var(--pc-link,#7E3E7C)">{{ t.code }}</span>
+                            <span style="font-size:11px;color:var(--pc-sub,#8A7A82)">{{ t.label }}</span>
+                          </button>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:2px">
+                        <span style="font-size:11px;color:var(--pc-sub,#8A7A82)">Exemplos:</span>
+                        <sc-for list="{{ presets }}" as="p" hint-placeholder-count="3">
+                          <button onClick="{{ p.onClick }}" style="display:flex;flex-direction:column;gap:2px;padding:6px 9px;border:1px solid {{ p.border }};border-radius:7px;background:{{ p.bg }};text-align:left" style-hover="border-color:var(--pc-accent,#B078AD)">
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--pc-link,#5D2456)">{{ p.pattern }}</span>
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--pc-sub,#9C8B93)">{{ p.sample }}</span>
+                          </button>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--pc-rowline,#F1E8ED)">
+                  <div style="min-width:0">
+                    <div style="font-size:13px;font-weight:700">Copiar sempre para a área de transferência</div>
+                    <div style="font-size:11.5px;color:var(--pc-sub,#8A7A82)">Além de salvar o arquivo</div>
+                  </div>
+                  <button onClick="{{ toggleAutoCopy }}" style="margin-left:auto;flex:none;width:44px;height:26px;padding:3px;border:0;border-radius:13px;background:{{ swAutoCopy }};display:flex" style-hover="filter:brightness(0.96)">
+                    <span style="width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);display:block;transition:margin-left .16s ease;margin-left:{{ knAutoCopy }}"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--pc-label,#8E4C8C)">Geral</div>
+              <div style="border:1px solid var(--pc-line,#E9DDE5);border-radius:12px;background:var(--pc-card,#fff)">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px">
+                  <div style="min-width:0">
+                    <div style="font-size:13px;font-weight:700">Iniciar com o sistema</div>
+                    <div style="font-size:11.5px;color:var(--pc-sub,#8A7A82)">Sobe em segundo plano no login</div>
+                  </div>
+                  <button onClick="{{ toggleAutostart }}" style="margin-left:auto;flex:none;width:44px;height:26px;padding:3px;border:0;border-radius:13px;background:{{ swAutostart }};display:flex" style-hover="filter:brightness(0.96)">
+                    <span style="width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);display:block;transition:margin-left .16s ease;margin-left:{{ knAutostart }}"></span>
+                  </button>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--pc-rowline,#F1E8ED)">
+                  <div style="min-width:0">
+                    <div style="font-size:13px;font-weight:700">Ícone na bandeja</div>
+                    <div style="font-size:11.5px;color:var(--pc-sub,#8A7A82)">Acesso rápido a capturar e configurar</div>
+                  </div>
+                  <button onClick="{{ toggleTrayIcon }}" style="margin-left:auto;flex:none;width:44px;height:26px;padding:3px;border:0;border-radius:13px;background:{{ swTray }};display:flex" style-hover="filter:brightness(0.96)">
+                    <span style="width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);display:block;transition:margin-left .16s ease;margin-left:{{ knTray }}"></span>
+                  </button>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--pc-rowline,#F1E8ED)">
+                  <div style="font-size:13px;font-weight:700">Tema</div>
+                  <div style="margin-left:auto;display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--pc-chip,rgba(36,23,21,0.05))">
+                    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="3">
+                      <button onClick="{{ t.onClick }}" style="padding:5px 12px;border:0;border-radius:7px;font-size:12px;font-weight:700;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--pc-rowline,#F1E8ED)">
+                  <div style="min-width:0">
+                    <div style="font-size:13px;font-weight:700">Fonte</div>
+                    <div style="font-size:11.5px;color:var(--pc-sub,#8A7A82)">Letras mais fáceis de ler</div>
+                  </div>
+                  <div style="margin-left:auto;display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--pc-chip,rgba(36,23,21,0.05))">
+                    <sc-for list="{{ fonts }}" as="f" hint-placeholder-count="2">
+                      <button onClick="{{ f.onClick }}" style="padding:5px 12px;border:0;border-radius:7px;font-size:12px;font-weight:700;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--pc-note,#F6EAF4)">
+              <div style="font-size:11.5px;color:var(--pc-notefg,#5D4A54);line-height:1.5">Os atalhos funcionam em qualquer tela do computador, mesmo com esta janela fechada.</div>
+              <button onClick="{{ capture }}" style="margin-left:auto;flex:none;padding:8px 14px;border:0;border-radius:9px;background:var(--pc-accent,#7E3E7C);color:var(--pc-onaccent,#fff);font-size:12.5px;font-weight:700" style-hover="opacity:0.88">Capturar agora</button>
+            </div>
+
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isHistTab }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+            <sc-for list="{{ history }}" as="h" hint-placeholder-count="4">
+              <div style="border:1px solid var(--pc-line,#E9DDE5);border-radius:12px;overflow:hidden;background:var(--pc-card,#fff)">
+                <div style="height:104px;background:{{ h.tint }};display:flex;align-items:flex-end;padding:10px;gap:6px">
+                  <span style="width:38%;height:46%;border-radius:4px;background:rgba(255,255,255,0.62);display:block"></span>
+                  <span style="width:26%;height:66%;border-radius:4px;background:rgba(255,255,255,0.44);display:block"></span>
+                </div>
+                <div style="padding:9px 11px">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.name }}</div>
+                  <div style="font-size:11px;color:var(--pc-sub,#9C8B93);margin-top:3px">{{ h.when }} · PNG</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ editorOpen }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Editor de captura" style="position:absolute;inset:0;z-index:40">
+      <div style="position:absolute;inset:0;background:rgba(20,12,20,0.16)"></div>
+
+      <div ref="{{ canvasRef }}" onPointerDown="{{ onDown }}" onPointerMove="{{ onMove }}" onPointerUp="{{ onUp }}" onPointerLeave="{{ onLeave }}" style="position:absolute;inset:0;cursor:crosshair;touch-action:none"></div>
+
+      <sc-for list="{{ blurs }}" as="b" hint-placeholder-count="0">
+        <div style="position:absolute;border-radius:2px;backdrop-filter:blur(9px);background:rgba(255,255,255,0.04);pointer-events:none;left:{{ b.left }};top:{{ b.top }};width:{{ b.width }};height:{{ b.height }}"></div>
+      </sc-for>
+
+      <sc-for list="{{ rects }}" as="r" hint-placeholder-count="0">
+        <div style="position:absolute;pointer-events:none;border-style:solid;left:{{ r.left }};top:{{ r.top }};width:{{ r.width }};height:{{ r.height }};border-width:{{ r.bw }};border-color:{{ r.color }};border-radius:{{ r.radius }}"></div>
+      </sc-for>
+
+      <sc-for list="{{ strokes }}" as="s" hint-placeholder-count="0">
+        <svg style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none">
+          <path d="{{ s.d }}" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="{{ s.color }}" stroke-width="{{ s.width }}"></path>
+        </svg>
+      </sc-for>
+
+      <sc-for list="{{ texts }}" as="t" hint-placeholder-count="0">
+        <div style="position:absolute;pointer-events:none;font-weight:700;white-space:pre;left:{{ t.left }};top:{{ t.top }};color:{{ t.color }};font-size:{{ t.size }};text-shadow:0 1px 2px rgba(0,0,0,0.35)">{{ t.text }}</div>
+      </sc-for>
+
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="0">
+        <div style="position:absolute;pointer-events:none;display:grid;place-items:center;border-radius:50%;color:#fff;font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.35);width:30px;height:30px;left:{{ s.left }};top:{{ s.top }};background:{{ s.color }}">{{ s.n }}</div>
+      </sc-for>
+
+      <sc-if value="{{ cropOn }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;pointer-events:none;box-shadow:0 0 0 9999px rgba(14,8,14,0.5);outline:3px dashed rgba(255,255,255,0.95);outline-offset:0;left:{{ cropBox.left }};top:{{ cropBox.top }};width:{{ cropBox.width }};height:{{ cropBox.height }}">
+          <span style="position:absolute;left:-3px;top:-3px;width:12px;height:12px;background:#FCD0EA;display:block;z-index:2"></span>
+          <span style="position:absolute;right:-3px;top:-3px;width:12px;height:12px;background:#FCD0EA;display:block;z-index:2"></span>
+          <span style="position:absolute;left:-3px;bottom:-3px;width:12px;height:12px;background:#FCD0EA;display:block;z-index:2"></span>
+          <span style="position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;background:#FCD0EA;display:block;z-index:2"></span>
+          <span style="position:absolute;left:0;top:-26px;padding:2px 7px;border-radius:5px;background:rgba(14,8,14,0.8);color:#fff;font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:nowrap">{{ cropBox.size }}</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ loupeOn }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;pointer-events:none;z-index:5;display:flex;flex-direction:column;align-items:center;gap:5px;left:{{ loupeLeft }};top:{{ loupeTop }}">
+          <div style="position:relative;width:96px;height:96px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,0.9);box-shadow:0 8px 22px rgba(0,0,0,0.5)">
+            <div style="position:absolute;inset:0;background-color:#2E1B2B;background-image:linear-gradient(rgba(255,255,255,0.14) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.14) 1px, transparent 1px);background-size:12px 12px;background-position:{{ loupeShift }}"></div>
+            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(252,208,234,0.85)"></div>
+            <div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:rgba(252,208,234,0.85)"></div>
+            <div style="position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;box-shadow:0 0 0 1.5px #FCD0EA, 0 0 0 3px rgba(45,20,42,0.5)"></div>
+          </div>
+          <div style="padding:2px 7px;border-radius:5px;background:rgba(14,8,14,0.82);color:#fff;font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:nowrap">{{ loupeCoord }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ textDraftOn }}" hint-placeholder-val="{{ false }}">
+        <input ref="{{ textRef }}" value="{{ textDraftValue }}" onChange="{{ onTextDraft }}" onKeyDown="{{ onTextKey }}" onBlur="{{ commitText }}" placeholder="digite e Enter" style="position:absolute;padding:5px 8px;border:1px solid rgba(255,255,255,0.5);border-radius:7px;background:rgba(14,8,14,0.82);color:#fff;font-size:14px;font-weight:700;outline:none;min-width:170px;left:{{ textDraftLeft }};top:{{ textDraftTop }}" />
+      </sc-if>
+
+      <sc-if value="{{ isVariantA }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;left:50%;top:18px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);flex-wrap:nowrap;justify-content:center;padding:6px;border-radius:14px;background:rgba(102,46,100,0.72);backdrop-filter:blur(18px) saturate(1.3);border:1px solid rgba(252,208,234,0.22);box-shadow:0 16px 40px rgba(0,0,0,0.38);z-index:6">
+          <div style="display:flex;align-items:center;gap:3px">
+            <sc-for list="{{ tools }}" as="t" hint-placeholder-count="8">
+              <button onClick="{{ t.onClick }}" title="{{ t.label }}" style="width:36px;height:36px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;transition:background .12s;background:{{ t.bg }};color:{{ t.fg }}">
+                <sc-if value="{{ t.isCrop }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M7 3v14h14"></path><path d="M17 21V7H3"></path></svg></sc-if>
+                <sc-if value="{{ t.isArrow }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5"></path><path d="M19 13V5h-8"></path></svg></sc-if>
+                <sc-if value="{{ t.isRect }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="6" width="16" height="12" rx="2"></rect></svg></sc-if>
+                <sc-if value="{{ t.isEllipse }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><ellipse cx="12" cy="12" rx="9" ry="7"></ellipse></svg></sc-if>
+                <sc-if value="{{ t.isPen }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16z"></path></svg></sc-if>
+                <sc-if value="{{ t.isText }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6h12"></path><path d="M12 6v12"></path></svg></sc-if>
+                <sc-if value="{{ t.isBlur }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1" opacity="0.55"></rect><rect x="4" y="14" width="6" height="6" rx="1" opacity="0.55"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></svg></sc-if>
+                <sc-if value="{{ t.isStep }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="8.5"></circle><path d="M10.5 9.6L12.4 8.6V16" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+              </button>
+            </sc-for>
+          </div>
+
+          <span style="width:1px;height:26px;background:rgba(255,255,255,0.22);display:block"></span>
+
+          <div style="display:flex;align-items:center;gap:5px">
+            <sc-for list="{{ swatches }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ c.onClick }}" title="{{ c.value }}" style="width:20px;height:20px;padding:0;border-radius:50%;background:{{ c.value }};border:2px solid {{ c.ring }};box-shadow:0 0 0 1px rgba(0,0,0,0.18) inset"></button>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:3px">
+            <sc-for list="{{ widths }}" as="w" hint-placeholder-count="3">
+              <button onClick="{{ w.onClick }}" title="{{ w.label }}" style="width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;border-radius:8px;background:{{ w.bg }}">
+                <span style="border-radius:50%;background:{{ w.fg }};display:block;width:{{ w.dot }};height:{{ w.dot }}"></span>
+              </button>
+            </sc-for>
+          </div>
+
+          <span style="width:1px;height:26px;background:rgba(255,255,255,0.22);display:block"></span>
+
+          <div style="display:flex;align-items:center;gap:3px">
+            <button onClick="{{ undo }}" title="Desfazer" style="width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:rgba(255,255,255,0.88)" style-hover="background:rgba(255,255,255,0.14)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h9a5 5 0 010 10H8"></path><path d="M4 10l4-4M4 10l4 4"></path></svg>
+            </button>
+            <button onClick="{{ redo }}" title="Refazer" style="width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:rgba(255,255,255,0.88)" style-hover="background:rgba(255,255,255,0.14)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10h-9a5 5 0 000 10h5"></path><path d="M20 10l-4-4M20 10l-4 4"></path></svg>
+            </button>
+            <button onClick="{{ pin }}" title="Fixar na tela" style="width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:{{ pinBg }};color:rgba(255,255,255,0.88)" style-hover="background:rgba(255,255,255,0.14)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 6 3 3H7l3-3z"></path><path d="M12 13v7"></path></svg>
+            </button>
+            <button onClick="{{ copy }}" title="Copiar" style="width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:rgba(255,255,255,0.88)" style-hover="background:rgba(255,255,255,0.14)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M15 5H6a1 1 0 00-1 1v9" stroke-linecap="round"></path></svg>
+            </button>
+          </div>
+
+          <span style="width:1px;height:26px;background:rgba(255,255,255,0.22);display:block"></span>
+
+          <div style="display:flex;align-items:center;gap:5px">
+            <button onClick="{{ cancel }}" title="Cancelar (Esc)" style="width:36px;height:36px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:rgba(206,96,66,0.34);color:#FFDCCE" style-hover="background:#CE6042;color:#fff">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </button>
+            <button onClick="{{ save }}" title="Salvar na pasta (Ctrl+S)" style="width:38px;height:38px;display:grid;place-items:center;padding:0;border:0;border-radius:11px;background:#FCD0EA;color:#5D2456;box-shadow:0 3px 12px rgba(252,208,234,0.4)" style-hover="background:#fff">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"></path><path d="M8 11l4 4 4-4"></path><path d="M5 18h14"></path></svg>
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isVariantB }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:50%;top:18px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:6;max-width:calc(100% - 32px)">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;justify-content:center;padding:6px;border-radius:14px;background:rgba(24,16,23,0.6);backdrop-filter:blur(18px) saturate(1.2);border:1px solid rgba(255,255,255,0.14);box-shadow:0 16px 40px rgba(0,0,0,0.42)">
+            <div style="display:flex;align-items:center;gap:3px">
+              <sc-for list="{{ tools }}" as="t" hint-placeholder-count="8">
+                <button onClick="{{ t.onClick }}" title="{{ t.label }}" style="width:36px;height:36px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;transition:background .12s;background:{{ t.bg }};color:{{ t.fg }}">
+                  <sc-if value="{{ t.isCrop }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M7 3v14h14"></path><path d="M17 21V7H3"></path></svg></sc-if>
+                  <sc-if value="{{ t.isArrow }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5"></path><path d="M19 13V5h-8"></path></svg></sc-if>
+                  <sc-if value="{{ t.isRect }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="6" width="16" height="12" rx="2"></rect></svg></sc-if>
+                  <sc-if value="{{ t.isEllipse }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><ellipse cx="12" cy="12" rx="9" ry="7"></ellipse></svg></sc-if>
+                  <sc-if value="{{ t.isPen }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16z"></path></svg></sc-if>
+                  <sc-if value="{{ t.isText }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6h12"></path><path d="M12 6v12"></path></svg></sc-if>
+                  <sc-if value="{{ t.isBlur }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1" opacity="0.55"></rect><rect x="4" y="14" width="6" height="6" rx="1" opacity="0.55"></rect><rect x="14" y="14" width="6" height="6" rx="1"></rect></svg></sc-if>
+                  <sc-if value="{{ t.isStep }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="8.5"></circle><path d="M10.5 9.6L12.4 8.6V16" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                </button>
+              </sc-for>
+            </div>
+
+            <span style="width:1px;height:26px;background:rgba(255,255,255,0.14);display:block"></span>
+
+            <div style="display:flex;align-items:center;gap:5px">
+              <sc-for list="{{ swatches }}" as="c" hint-placeholder-count="5">
+                <button onClick="{{ c.onClick }}" title="{{ c.value }}" style="width:20px;height:20px;padding:0;border-radius:50%;background:{{ c.value }};border:2px solid {{ c.ring }};box-shadow:0 0 0 1px rgba(0,0,0,0.18) inset"></button>
+              </sc-for>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:3px">
+              <sc-for list="{{ widths }}" as="w" hint-placeholder-count="3">
+                <button onClick="{{ w.onClick }}" title="{{ w.label }}" style="width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;border-radius:8px;background:{{ w.bg }}">
+                  <span style="border-radius:50%;background:{{ w.fg }};display:block;width:{{ w.dot }};height:{{ w.dot }}"></span>
+                </button>
+              </sc-for>
+            </div>
+
+            <span style="width:1px;height:26px;background:rgba(255,255,255,0.14);display:block"></span>
+
+            <div style="display:flex;align-items:center;gap:3px">
+              <button onClick="{{ undo }}" title="Desfazer" style="width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:rgba(255,255,255,0.82)" style-hover="background:rgba(255,255,255,0.1)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h9a5 5 0 010 10H8"></path><path d="M4 10l4-4M4 10l4 4"></path></svg>
+              </button>
+              <button onClick="{{ redo }}" title="Refazer" style="width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:rgba(255,255,255,0.82)" style-hover="background:rgba(255,255,255,0.1)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10h-9a5 5 0 000 10h5"></path><path d="M20 10l-4-4M20 10l-4 4"></path></svg>
+              </button>
+              <button onClick="{{ pin }}" title="Fixar na tela" style="width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:{{ pinBg }};color:rgba(255,255,255,0.82)" style-hover="background:rgba(255,255,255,0.1)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 6 3 3H7l3-3z"></path><path d="M12 13v7"></path></svg>
+              </button>
+              <button onClick="{{ copy }}" title="Copiar" style="width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:rgba(255,255,255,0.82)" style-hover="background:rgba(255,255,255,0.1)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M15 5H6a1 1 0 00-1 1v9" stroke-linecap="round"></path></svg>
+              </button>
+            </div>
+
+            <span style="width:1px;height:26px;background:rgba(255,255,255,0.14);display:block"></span>
+
+            <div style="display:flex;align-items:center;gap:5px">
+              <button onClick="{{ cancel }}" title="Cancelar (Esc)" style="width:36px;height:36px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:rgba(206,96,66,0.3);color:#FFDCCE" style-hover="background:#CE6042;color:#fff">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+              </button>
+              <button onClick="{{ save }}" title="Salvar na pasta (Ctrl+S)" style="width:38px;height:38px;display:grid;place-items:center;padding:0;border:0;border-radius:11px;background:#B65FB3;color:#fff;box-shadow:0 3px 12px rgba(182,95,179,0.45)" style-hover="background:#C972C6">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"></path><path d="M8 11l4 4 4-4"></path><path d="M5 18h14"></path></svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ flash }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#fff;pointer-events:none;z-index:60;animation:pcFlash .42s ease-out forwards"></div>
+  </sc-if>
+
+  <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:18px;bottom:18px;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:rgba(20,13,19,0.9);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 20px 50px rgba(0,0,0,0.5);z-index:55;animation:pcRise .2s ease-out;max-width:min(360px,80%)">
+      <span style="width:52px;height:38px;border-radius:6px;background:linear-gradient(140deg,#E9C6E4,#B078AD);flex:none;display:block"></span>
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#fff">{{ toastTitle }}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(255,255,255,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ toastName }}</div>
+      </div>
+      <button onClick="{{ openHistory }}" style="margin-left:auto;flex:none;padding:6px 11px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:transparent;color:#FCD0EA;font-size:11.5px" style-hover="background:rgba(255,255,255,0.1)">Abrir pasta</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hintsOn }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;left:18px;bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 9px 7px 13px;border-radius:12px;background:rgba(20,13,19,0.72);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);z-index:50;font-size:11.5px;color:rgba(255,255,255,0.66)">
+      <span><span style="font-family:'JetBrains Mono',monospace;color:#FCD0EA">PrtSc</span> ou <span style="font-family:'JetBrains Mono',monospace;color:#FCD0EA">P</span> capturar · <span style="font-family:'JetBrains Mono',monospace;color:#FCD0EA">Esc</span> cancelar · <span style="font-family:'JetBrains Mono',monospace;color:#FCD0EA">Ctrl+Z</span> desfazer</span>
+      <span style="width:1px;height:18px;background:rgba(255,255,255,0.14);display:block"></span>
+      <div style="display:flex;gap:2px;padding:2px;border-radius:8px;background:rgba(255,255,255,0.08)">
+        <sc-for list="{{ variants }}" as="v" hint-placeholder-count="2">
+          <button onClick="{{ v.onClick }}" style="padding:4px 9px;border:0;border-radius:6px;font-size:11px;font-weight:700;background:{{ v.bg }};color:{{ v.fg }}">{{ v.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;toolbarVariant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Dock lilás&quot;,&quot;OSD escuro&quot;],&quot;default&quot;:&quot;Dock lilás&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Protótipo&quot;},&quot;startTool&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Recorte&quot;,&quot;Seta&quot;,&quot;Retângulo&quot;],&quot;default&quot;:&quot;Recorte&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Editor&quot;},&quot;showPrototypeHints&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Protótipo&quot;}}">
+class Component extends DCLogic {
+  state = {
+    settingsOpen: true, tab: 'cfg', trayOpen: false, editorOpen: false,
+    tool: null, color: '#E51919', width: 4,
+    ops: [], redoStack: [], drag: null, textDraft: null, stepN: 1,
+    pinned: false, flash: false, toast: null, clock: '',
+    variant: null, capturing: null,
+    cfg: {
+      full: 'PrtSc', region: 'Shift + PrtSc', win: 'Alt + PrtSc',
+      folder: '~/Imagens/printcher', format: 'PNG',
+      pattern: 'printcher_%Y-%m-%d_%H-%M-%S', autoCopy: true,
+      autostart: true, tray: true, theme: 'Sistema', font: 'Padrão'
+    },
+    history: [
+      { name: 'printcher_2026-09-05_14-08-51.png', when: 'ontem', tint: 'linear-gradient(140deg,#E9C6E4,#B078AD)' },
+      { name: 'printcher_2026-09-04_09-22-17.png', when: '2 dias', tint: 'linear-gradient(140deg,#F2D8C4,#D08C4E)' },
+      { name: 'printcher_2026-09-02_18-40-03.png', when: '4 dias', tint: 'linear-gradient(140deg,#D9C9E8,#8E7BB0)' }
+    ]
+  };
+
+  constructor(p) {
+    super(p);
+    this.canvasRef = React.createRef();
+    this.textRef = React.createRef();
+  }
+
+  componentDidMount() {
+    this._mq = window.matchMedia('(prefers-color-scheme: dark)');
+    this._onMq = () => this.setState({ sysDark: this._mq.matches });
+    this.setState({ sysDark: this._mq.matches });
+    if (this._mq.addEventListener) this._mq.addEventListener('change', this._onMq);
+    this.tick();
+    this._clock = setInterval(() => this.tick(), 20000);
+    this._key = (e) => this.onKey(e);
+    window.addEventListener('keydown', this._key);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this._clock);
+    clearTimeout(this._toastT);
+    clearTimeout(this._flashT);
+    clearTimeout(this._cropT);
+    if (this._mq && this._mq.removeEventListener) this._mq.removeEventListener('change', this._onMq);
+    window.removeEventListener('keydown', this._key);
+  }
+
+  componentDidUpdate(pp, ps) {
+    if (this.state.textDraft && !ps.textDraft && this.textRef.current) this.textRef.current.focus();
+  }
+
+  tick() {
+    const d = new Date();
+    const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    this.setState({ clock: dias[d.getDay()] + ' ' + d.getDate() + ' · ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
+  }
+
+  // ---------- teclado ----------
+  onKey(e) {
+    if (this.state.capturing) {
+      e.preventDefault();
+      const parts = [];
+      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.altKey) parts.push('Alt');
+      if (e.shiftKey) parts.push('Shift');
+      if (e.metaKey) parts.push('Super');
+      let k = e.key;
+      if (k === 'PrintScreen') k = 'PrtSc';
+      else if (k === ' ') k = 'Espaço';
+      else if (k.length === 1) k = k.toUpperCase();
+      if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+        parts.push(k);
+        this.setCfg(this.state.capturing, parts.join(' + '));
+        this.setState({ capturing: null });
+      }
+      return;
+    }
+    const typing = e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName);
+    if (e.key === 'Escape') {
+      if (this.state.editorOpen) this.cancel();
+      else if (this.state.trayOpen) this.setState({ trayOpen: false });
+      else if (this.state.settingsOpen) this.setState({ settingsOpen: false });
+      return;
+    }
+    if (typing) return;
+    if (e.key === 'PrintScreen' || e.key === 'p' || e.key === 'P') { e.preventDefault(); this.capture(); return; }
+    if (!this.state.editorOpen) return;
+    if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); this.undo(); }
+    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); this.save(); }
+    if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); this.copy(); }
+  }
+
+  // ---------- fluxo ----------
+  startTool() {
+    const m = { 'Recorte': 'crop', 'Seta': 'arrow', 'Retângulo': 'rect' };
+    return m[this.props.startTool] || 'crop';
+  }
+
+  capture() {
+    if (this.state.editorOpen) return;
+    clearTimeout(this._flashT);
+    this.setState({
+      editorOpen: true, settingsOpen: false, trayOpen: false, toast: null,
+      flash: true, tool: this.startTool(), ops: [], redoStack: [], stepN: 1,
+      textDraft: null, drag: null, pinned: false
+    });
+    this._flashT = setTimeout(() => this.setState({ flash: false }), 440);
+  }
+
+  cancel() { this.setState({ editorOpen: false, ops: [], drag: null, textDraft: null }); }
+
+  expand(pattern) {
+    const d = new Date(), p = (n) => String(n).padStart(2, '0');
+    const ext = this.state.cfg.format.toLowerCase() === 'jpg' ? 'jpg' : this.state.cfg.format.toLowerCase();
+    return String(pattern)
+      .split('%Y').join(d.getFullYear())
+      .split('%m').join(p(d.getMonth() + 1))
+      .split('%d').join(p(d.getDate()))
+      .split('%H').join(p(d.getHours()))
+      .split('%M').join(p(d.getMinutes()))
+      .split('%S').join(p(d.getSeconds()))
+      .split('%n').join(String(this.state.history.length + 1).padStart(3, '0'))
+      + '.' + ext;
+  }
+
+  fileName() { return this.expand(this.state.cfg.pattern); }
+
+  toast(title, name) {
+    clearTimeout(this._toastT);
+    this.setState({ toast: { title, name } });
+    this._toastT = setTimeout(() => this.setState({ toast: null }), 4600);
+  }
+
+  save() {
+    const name = this.fileName();
+    const tints = ['linear-gradient(140deg,#E9C6E4,#B078AD)', 'linear-gradient(140deg,#F2D8C4,#D08C4E)', 'linear-gradient(140deg,#D9C9E8,#8E7BB0)'];
+    const item = { name, when: 'agora', tint: tints[this.state.history.length % 3] };
+    this.setState((s) => ({ editorOpen: false, ops: [], drag: null, textDraft: null, history: [item].concat(s.history).slice(0, 8) }));
+    this.toast(this.state.cfg.autoCopy ? 'Salva e copiada' : 'Captura salva', this.state.cfg.folder + '/' + name);
+  }
+
+  copy() { this.toast('Copiada', 'área de transferência · ' + this.state.cfg.format); }
+  pin() { this.setState((s) => ({ pinned: !s.pinned })); }
+
+  undo() {
+    this.setState((s) => {
+      if (!s.ops.length) return null;
+      const ops = s.ops.slice(0, -1);
+      const last = s.ops[s.ops.length - 1];
+      return { ops, redoStack: s.redoStack.concat([last]), stepN: last.kind === 'step' ? Math.max(1, s.stepN - 1) : s.stepN };
+    });
+  }
+
+  redo() {
+    this.setState((s) => {
+      if (!s.redoStack.length) return null;
+      const last = s.redoStack[s.redoStack.length - 1];
+      return { ops: s.ops.concat([last]), redoStack: s.redoStack.slice(0, -1), stepN: last.kind === 'step' ? s.stepN + 1 : s.stepN };
+    });
+  }
+
+  push(op) { this.setState((s) => ({ ops: s.ops.concat([op]), redoStack: [] })); }
+
+  // ---------- desenho ----------
+  at(e) {
+    const r = this.canvasRef.current.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  onDown(e) {
+    const p = this.at(e);
+    const t = this.state.tool;
+    if (t === 'text') { this.setState({ textDraft: { x: p.x, y: p.y, v: '' } }); return; }
+    if (t === 'step') {
+      this.push({ kind: 'step', x: p.x, y: p.y, n: this.state.stepN, color: this.state.color });
+      this.setState((s) => ({ stepN: s.stepN + 1 }));
+      return;
+    }
+    e.currentTarget.setPointerCapture(e.pointerId);
+    this.setState({ drag: { x0: p.x, y0: p.y, x: p.x, y: p.y, pts: [[p.x, p.y]] } });
+  }
+
+  onLeave() { if (this.state.cur) this.setState({ cur: null }); }
+
+  onMove(e) {
+    const p = this.at(e);
+    if (this.state.tool === 'crop') this.setState({ cur: p });
+    if (!this.state.drag) return;
+    this.setState((s) => {
+      if (!s.drag) return null;
+      const pts = s.tool === 'pen' ? s.drag.pts.concat([[p.x, p.y]]) : s.drag.pts;
+      return { drag: Object.assign({}, s.drag, { x: p.x, y: p.y, pts }) };
+    });
+  }
+
+  onUp() {
+    const s = this.state, d = s.drag;
+    if (!d) return;
+    const moved = Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4;
+    if (moved) {
+      const base = { color: s.color, width: s.width };
+      if (s.tool === 'pen') this.push(Object.assign({ kind: 'pen', pts: d.pts }, base));
+      else this.push(Object.assign({ kind: s.tool, x0: d.x0, y0: d.y0, x1: d.x, y1: d.y }, base));
+    }
+    this.setState({ drag: null });
+  }
+
+  onTextDraft(e) { const v = e.target.value; this.setState((s) => ({ textDraft: Object.assign({}, s.textDraft, { v }) })); }
+  onTextKey(e) { if (e.key === 'Enter') this.commitText(); if (e.key === 'Escape') this.setState({ textDraft: null }); }
+  commitText() {
+    const d = this.state.textDraft;
+    if (d && d.v.trim()) this.push({ kind: 'text', x: d.x, y: d.y, text: d.v, color: this.state.color, size: 14 + this.state.width * 3 });
+    this.setState({ textDraft: null });
+  }
+
+  // ---------- geometria ----------
+  norm(o) {
+    return { x: Math.min(o.x0, o.x1), y: Math.min(o.y0, o.y1), w: Math.abs(o.x1 - o.x0), h: Math.abs(o.y1 - o.y0) };
+  }
+
+  arrowPath(o) {
+    const a = Math.atan2(o.y1 - o.y0, o.x1 - o.x0), L = 11 + o.width * 2.4, s = 0.44;
+    return 'M' + o.x0 + ' ' + o.y0 + 'L' + o.x1 + ' ' + o.y1 +
+      'M' + o.x1 + ' ' + o.y1 + 'L' + (o.x1 - L * Math.cos(a - s)) + ' ' + (o.y1 - L * Math.sin(a - s)) +
+      'M' + o.x1 + ' ' + o.y1 + 'L' + (o.x1 - L * Math.cos(a + s)) + ' ' + (o.y1 - L * Math.sin(a + s));
+  }
+
+  liveOps() {
+    const s = this.state, d = s.drag, out = s.ops.slice();
+    if (d && s.tool !== 'text' && s.tool !== 'step') {
+      const base = { color: s.color, width: s.width };
+      if (s.tool === 'pen') out.push(Object.assign({ kind: 'pen', pts: d.pts }, base));
+      else out.push(Object.assign({ kind: s.tool, x0: d.x0, y0: d.y0, x1: d.x, y1: d.y }, base));
+    }
+    return out;
+  }
+
+  // ---------- setters ----------
+  setCfg(k, v) { this.setState((s) => ({ cfg: Object.assign({}, s.cfg, { [k]: v }) })); }
+
+  renderVals() {
+    const s = this.state;
+    const px = (n) => Math.round(n) + 'px';
+    const variant = s.variant || (this.props.toolbarVariant === 'OSD escuro' ? 'b' : 'a');
+    const A = variant === 'a';
+    const ops = this.liveOps();
+    const cropOp = ops.filter((o) => o.kind === 'crop').pop();
+    const crop = cropOp ? this.norm(cropOp) : null;
+
+    const toolMeta = [
+      ['crop', 'Recorte'], ['arrow', 'Seta'], ['rect', 'Retângulo'], ['ellipse', 'Elipse'],
+      ['pen', 'Caneta livre'], ['text', 'Texto'], ['blur', 'Desfoque'], ['step', 'Numeração']
+    ];
+    const tools = toolMeta.map(([id, label]) => {
+      const on = s.tool === id;
+      return {
+        label, isCrop: id === 'crop', isArrow: id === 'arrow', isRect: id === 'rect',
+        isEllipse: id === 'ellipse', isPen: id === 'pen', isText: id === 'text',
+        isBlur: id === 'blur', isStep: id === 'step',
+        bg: on ? (A ? '#FCD0EA' : '#8E4C8C') : 'transparent',
+        fg: on ? (A ? '#5D2456' : '#ffffff') : (A ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.8)'),
+        onClick: () => this.setState({ tool: id, textDraft: null, cur: null })
+      };
+    });
+
+    const swatches = ['#E51919', '#E58635', '#7E3E7C', '#FCFAFB', '#241715'].map((v) => ({
+      value: v, ring: s.color === v ? '#FCD0EA' : 'rgba(255,255,255,0.28)',
+      onClick: () => this.setState({ color: v })
+    }));
+
+    const widths = [[2, 'Fina', '5px'], [4, 'Média', '8px'], [8, 'Grossa', '12px']].map(([w, label, dot]) => ({
+      label, dot,
+      bg: s.width === w ? (A ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.14)') : 'transparent',
+      fg: s.width === w ? '#FCD0EA' : 'rgba(255,255,255,0.7)',
+      onClick: () => this.setState({ width: w })
+    }));
+
+    const sc = [['full', 'Tela cheia', 'Captura a tela inteira e abre o editor'], ['region', 'Região', 'Já entra com a seleção pronta pra arrastar'], ['win', 'Janela ativa', 'Só a janela em foco']];
+    const shortcuts = sc.map(([k, title, sub]) => {
+      const cap = s.capturing === k;
+      return {
+        title, sub, keys: cap ? 'Pressione…' : s.cfg[k],
+        bg: cap ? 'var(--pc-accent,#7E3E7C)' : 'var(--pc-input,#FCFAFB)',
+        fg: cap ? 'var(--pc-onaccent,#ffffff)' : 'var(--pc-fg,#4A2E44)',
+        border: cap ? 'var(--pc-accent,#7E3E7C)' : 'var(--pc-inputline,#E0CFDC)',
+        onClick: () => this.setState({ capturing: cap ? null : k })
+      };
+    });
+
+    const seg = (list, cur, set) => list.map((label) => ({
+      label,
+      bg: cur === label ? 'var(--pc-accent,#7E3E7C)' : 'transparent',
+      fg: cur === label ? 'var(--pc-onaccent,#ffffff)' : 'var(--pc-notefg,#5D4A54)',
+      onClick: () => set(label)
+    }));
+
+    const light = {
+      bg: '#FCFAFB', fg: '#241715', head: '#F6EAF4', headLine: '#E9D8E6', card: '#ffffff',
+      line: '#E9DDE5', rowLine: '#F1E8ED', sub: '#8A7A82', label: '#8E4C8C', input: '#FCFAFB',
+      inputLine: '#E0CFDC', note: '#F6EAF4', noteFg: '#5D4A54', chip: 'rgba(36,23,21,0.06)',
+      accent: '#7E3E7C', onAccent: '#ffffff', off: '#D8CBD3', link: '#7E3E7C', mono: '#5D4A54',
+      hover: 'rgba(36,23,21,0.12)', tabIdle: '#6B4C66'
+    };
+    const dark = {
+      bg: '#1E141C', fg: '#F3EAF0', head: '#2A1B27', headLine: '#3B2A38', card: '#261A24',
+      line: '#3A2836', rowLine: '#33222F', sub: '#A99AA4', label: '#E6AFE0', input: '#1B1219',
+      inputLine: '#4A3446', note: '#2E1F2B', noteFg: '#CFC2CB', chip: 'rgba(255,255,255,0.08)',
+      accent: '#B65FB3', onAccent: '#ffffff', off: '#4A3446', link: '#E6AFE0', mono: '#CFC2CB',
+      hover: 'rgba(255,255,255,0.14)', tabIdle: '#C9BAC4'
+    };
+    const isDark = s.cfg.theme === 'Escuro' || (s.cfg.theme === 'Sistema' && s.sysDark);
+    const th = isDark ? dark : light;
+
+    const drawing = ['arrow', 'rect', 'ellipse', 'pen', 'text', 'step'].includes(s.tool);
+    const toolLabelMap = { crop: 'Recorte', arrow: 'Seta', rect: 'Retângulo', ellipse: 'Elipse', pen: 'Caneta livre', text: 'Texto', blur: 'Desfoque', step: 'Numeração' };
+
+    return {
+      clock: s.clock,
+      cfg: s.cfg,
+      history: s.history,
+      trayOpen: s.trayOpen,
+      toggleTray: () => this.setState((p) => ({ trayOpen: !p.trayOpen })),
+      closeTray: () => this.setState({ trayOpen: false }),
+      openSettings: () => this.setState({ settingsOpen: true, tab: 'cfg', trayOpen: false }),
+      openHistory: () => this.setState({ settingsOpen: true, tab: 'hist', trayOpen: false, toast: null }),
+      closeSettings: () => this.setState({ settingsOpen: false }),
+      settingsOpen: s.settingsOpen,
+      isCfgTab: s.tab === 'cfg',
+      isHistTab: s.tab === 'hist',
+      th,
+      tabCfgBg: s.tab === 'cfg' ? th.accent : 'transparent',
+      tabCfgFg: s.tab === 'cfg' ? th.onAccent : th.tabIdle,
+      tabHistBg: s.tab === 'hist' ? th.accent : 'transparent',
+      tabHistFg: s.tab === 'hist' ? th.onAccent : th.tabIdle,
+
+      shortcuts,
+      formats: seg(['PNG', 'JPG', 'WebP'], s.cfg.format, (v) => this.setCfg('format', v)),
+      themes: seg(['Claro', 'Escuro', 'Sistema'], s.cfg.theme, (v) => this.setCfg('theme', v)),
+      fonts: seg(['Padrão', 'Amigável para dislexia'], s.cfg.font, (v) => this.setCfg('font', v)),
+      fontStack: s.cfg.font === 'Amigável para dislexia'
+        ? "'OpenDyslexic',Cantarell,system-ui,sans-serif"
+        : 'Cantarell,system-ui,sans-serif',
+      onPattern: (e) => this.setCfg('pattern', e.target.value),
+      namePreview: this.fileName(),
+      tokensOpen: s.tokensOpen,
+      toggleTokens: () => this.setState((p) => ({ tokensOpen: !p.tokensOpen })),
+      helpHint: s.tokensOpen ? 'Ocultar códigos e exemplos' : 'Ver códigos e exemplos',
+      helpPlus: s.tokensOpen ? 0 : 1,
+      tokens: [
+        ['%Y', 'ano'], ['%m', 'mês'], ['%d', 'dia'],
+        ['%H', 'hora'], ['%M', 'minuto'], ['%S', 'segundo'], ['%n', 'contador']
+      ].map(([code, label]) => ({
+        code, label,
+        onClick: () => this.setCfg('pattern', s.cfg.pattern + code)
+      })),
+      presets: [
+        'printcher_%Y-%m-%d_%H-%M-%S',
+        'print_%d-%m-%Y_%Hh%M',
+        'captura_%n'
+      ].map((pattern) => ({
+        pattern, sample: this.expand(pattern),
+        bg: s.cfg.pattern === pattern ? (isDark ? '#3A2437' : '#F0DCEC') : th.card,
+        border: s.cfg.pattern === pattern ? th.accent : th.inputLine,
+        onClick: () => this.setCfg('pattern', pattern)
+      })),
+      pickFolder: () => this.toast('Pasta escolhida', s.cfg.folder),
+      toggleAutoCopy: () => this.setCfg('autoCopy', !s.cfg.autoCopy),
+      toggleAutostart: () => this.setCfg('autostart', !s.cfg.autostart),
+      toggleTrayIcon: () => this.setCfg('tray', !s.cfg.tray),
+      swAutoCopy: s.cfg.autoCopy ? th.accent : th.off,
+      knAutoCopy: s.cfg.autoCopy ? '18px' : '0px',
+      swAutostart: s.cfg.autostart ? th.accent : th.off,
+      knAutostart: s.cfg.autostart ? '18px' : '0px',
+      swTray: s.cfg.tray ? th.accent : th.off,
+      knTray: s.cfg.tray ? '18px' : '0px',
+
+      editorOpen: s.editorOpen,
+      canvasRef: this.canvasRef,
+      onDown: (e) => this.onDown(e),
+      onMove: (e) => this.onMove(e),
+      onUp: () => this.onUp(),
+
+      tools, swatches, widths,
+      isVariantA: A, isVariantB: !A,
+      showProps: drawing,
+      toolLabel: toolLabelMap[s.tool] || '',
+      pinBg: s.pinned ? 'rgba(252,208,234,0.28)' : 'transparent',
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+      pin: () => this.pin(),
+      copy: () => this.copy(),
+      cancel: () => this.cancel(),
+      save: () => this.save(),
+      capture: () => this.capture(),
+
+      blurs: ops.filter((o) => o.kind === 'blur').map((o) => {
+        const n = this.norm(o);
+        return { left: px(n.x), top: px(n.y), width: px(n.w), height: px(n.h) };
+      }),
+      rects: ops.filter((o) => o.kind === 'rect' || o.kind === 'ellipse').map((o) => {
+        const n = this.norm(o);
+        return { left: px(n.x), top: px(n.y), width: px(n.w), height: px(n.h), bw: o.width + 'px', color: o.color, radius: o.kind === 'ellipse' ? '50%' : '3px' };
+      }),
+      strokes: ops.filter((o) => ['arrow', 'line', 'pen'].includes(o.kind)).map((o) => ({
+        d: o.kind === 'pen' ? 'M' + o.pts.map((p) => p[0] + ' ' + p[1]).join('L') : this.arrowPath(o),
+        color: o.color, width: o.width
+      })),
+      texts: ops.filter((o) => o.kind === 'text').map((o) => ({
+        left: px(o.x), top: px(o.y - o.size), text: o.text, color: o.color, size: o.size + 'px'
+      })),
+      steps: ops.filter((o) => o.kind === 'step').map((o) => ({
+        left: px(o.x - 15), top: px(o.y - 15), n: o.n, color: o.color
+      })),
+
+      onLeave: () => this.onLeave(),
+      loupeOn: s.editorOpen && s.tool === 'crop' && !!s.cur,
+      loupeLeft: s.cur ? px(s.cur.x + 22) : '0px',
+      loupeTop: s.cur ? px(s.cur.y + 22) : '0px',
+      loupeShift: s.cur ? px(-(s.cur.x % 12) + 6) + ' ' + px(-(s.cur.y % 12) + 6) : '0 0',
+      loupeCoord: s.cur
+        ? (s.drag
+            ? Math.round(Math.abs(s.cur.x - s.drag.x0)) + ' × ' + Math.round(Math.abs(s.cur.y - s.drag.y0))
+            : Math.round(s.cur.x) + ', ' + Math.round(s.cur.y))
+        : '',
+
+      cropOn: !!crop,
+      cropBox: crop ? { left: px(crop.x), top: px(crop.y), width: px(crop.w), height: px(crop.h), size: Math.round(crop.w) + ' × ' + Math.round(crop.h) } : {},
+
+      textDraftOn: !!s.textDraft,
+      textDraftValue: s.textDraft ? s.textDraft.v : '',
+      textDraftLeft: s.textDraft ? px(s.textDraft.x) : '0px',
+      textDraftTop: s.textDraft ? px(s.textDraft.y - 16) : '0px',
+      textRef: this.textRef,
+      onTextDraft: (e) => this.onTextDraft(e),
+      onTextKey: (e) => this.onTextKey(e),
+      commitText: () => this.commitText(),
+
+      flash: s.flash,
+      toastOn: !!s.toast,
+      toastTitle: s.toast ? s.toast.title : '',
+      toastName: s.toast ? s.toast.name : '',
+
+      hintsOn: this.props.showPrototypeHints !== false,
+      variants: [['a', 'Dock lilás'], ['b', 'OSD escuro']].map(([id, label]) => ({
+        label,
+        bg: variant === id ? '#FCD0EA' : 'transparent',
+        fg: variant === id ? '#5D2456' : 'rgba(255,255,255,0.7)',
+        onClick: () => this.setState({ variant: id })
+      }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

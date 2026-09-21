@@ -2,6 +2,44 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+/// Tema da interface -- afeta a janela de Configurações (a barra flutuante
+/// do editor usa cores fixas da marca, não muda com isso).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum Theme {
+    Light,
+    Dark,
+    #[default]
+    System,
+}
+
+/// Formato de imagem pra salvar a captura -- afeta tanto a extensão do
+/// arquivo quanto o codificador usado (`editor::render::save_surface_as`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ImageFormat {
+    #[default]
+    Png,
+    Jpg,
+    WebP,
+}
+
+impl ImageFormat {
+    pub fn extension(self) -> &'static str {
+        match self {
+            ImageFormat::Png => "png",
+            ImageFormat::Jpg => "jpg",
+            ImageFormat::WebP => "webp",
+        }
+    }
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_pattern() -> String {
+    "printcher_%Y-%m-%d_%H-%M-%S".to_string()
+}
+
 /// Configurações persistentes do printcher. O atalho de captura em si NÃO
 /// mora aqui — quem guarda isso é o portal/compositor, via
 /// `GlobalShortcuts::configure_shortcuts`. Este arquivo é só pra
@@ -14,6 +52,31 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct Config {
     pub start_on_login: bool,
+    /// `#[serde(default = "default_true")]` em vez de depender do
+    /// `#[serde(default)]` do struct (que usaria `bool::default()` =
+    /// `false`): configs salvos antes desse campo existir não têm ele no
+    /// TOML, e sem isso o ícone da bandeja sumiria sozinho pra quem já
+    /// tinha o printcher instalado, na primeira vez que abrisse depois da
+    /// atualização.
+    #[serde(default = "default_true")]
+    pub tray_enabled: bool,
+    pub theme: Theme,
+    /// Só persiste a preferência por enquanto -- o efeito visual de
+    /// trocar pra fonte OpenDyslexic ainda depende de empacotar a fonte no
+    /// Flatpak, que é trabalho de uma fase futura.
+    pub dyslexia_font: bool,
+    /// `None` = usa o padrão calculado (`dirs::picture_dir()/printcher`) --
+    /// só grava um caminho fixo aqui quando o usuário escolhe outra pasta
+    /// explicitamente, pra continuar acompanhando se a pasta de Imagens do
+    /// sistema mudar de lugar.
+    pub folder: Option<PathBuf>,
+    pub format: ImageFormat,
+    #[serde(default = "default_pattern")]
+    pub pattern: String,
+    /// Copiar a captura pra área de transferência automaticamente ao
+    /// salvar, além de gravar o arquivo.
+    #[serde(default = "default_true")]
+    pub auto_copy: bool,
 }
 
 /// Carrega a configuração salva, ou os valores padrão se não existir/estiver
@@ -37,6 +100,10 @@ pub fn load_or_init() -> (Config, bool) {
 
     let cfg = Config {
         start_on_login: true,
+        tray_enabled: true,
+        pattern: default_pattern(),
+        auto_copy: true,
+        ..Default::default()
     };
     if let Err(e) = save(&cfg) {
         eprintln!("Erro ao salvar configuração inicial: {e}");
@@ -101,11 +168,39 @@ mod tests {
 
         save(&Config {
             start_on_login: true,
+            ..Default::default()
         })
         .unwrap();
 
         assert!(load().start_on_login);
         assert!(tmp.path().join("printcher/config.toml").exists());
+    }
+
+    #[test]
+    fn tray_enabled_defaults_to_true_when_missing_from_an_existing_config_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_config_home(tmp.path());
+
+        // Simula um config.toml salvo antes do campo `tray_enabled` existir.
+        let dir = tmp.path().join("printcher");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("config.toml"), "start_on_login = true\n").unwrap();
+
+        assert!(load().tray_enabled, "configs antigos não devem perder o ícone da bandeja sozinhos");
+    }
+
+    #[test]
+    fn theme_defaults_to_system() {
+        assert_eq!(Config::default().theme, Theme::System);
+    }
+
+    #[test]
+    fn load_or_init_enables_tray_by_default() {
+        let tmp = tempfile::tempdir().unwrap();
+        let _guard = crate::testutil::set_xdg_config_home(tmp.path());
+
+        let (cfg, _) = load_or_init();
+        assert!(cfg.tray_enabled);
     }
 
     #[test]

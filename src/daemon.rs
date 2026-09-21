@@ -21,6 +21,11 @@ pub(crate) enum DaemonEvent {
     Capture,
     Quit,
     OpenSettings,
+    /// Como `OpenSettings`, mas já abre na aba Histórico -- só a bandeja
+    /// dispara isso (`src/tray.rs`), direto no canal em processo, sem
+    /// precisar de método D-Bus próprio (a bandeja já roda dentro do
+    /// próprio daemon).
+    OpenHistory,
 }
 
 struct PrintcherService {
@@ -115,7 +120,15 @@ fn run_with(on_start: Option<InitialAction>, on_forward: Option<InitialAction>) 
     // Primeira vez que o printcher roda de verdade nesta máquina: liga
     // autostart por padrão (sem exigir que o usuário mexa em nada) e marca
     // pra mostrar um banner de boas-vindas na tela de configurações.
-    let (_, is_first_run) = crate::config::load_or_init();
+    let (cfg, is_first_run) = crate::config::load_or_init();
+
+    // Garante que a fonte de dislexia esteja disponível pro fontconfig
+    // achar (ver `fonts.rs`) -- não trava o daemon se falhar por algum
+    // motivo, só o toggle correspondente em Configurações não vai ter
+    // efeito visual.
+    if let Err(e) = crate::fonts::ensure_installed() {
+        eprintln!("Erro ao instalar a fonte de dislexia: {e}");
+    }
 
     // O atalho global (portal GlobalShortcuts) roda numa task própria do
     // runtime, em paralelo com o loop do GTK. Se o portal não estiver
@@ -128,15 +141,21 @@ fn run_with(on_start: Option<InitialAction>, on_forward: Option<InitialAction>) 
         }
     });
 
-    // Ícone na bandeja (StatusNotifierItem). Sem host disponível (ex: GNOME
-    // sem a extensão AppIndicator), só loga e segue sem ícone — o resto do
-    // daemon funciona igual.
-    let tray_handle = match runtime.block_on(tray::spawn(tx.clone(), configure_tx.clone())) {
-        Ok(handle) => Some(handle),
-        Err(e) => {
-            eprintln!("Ícone da bandeja indisponível: {e}");
-            None
+    // Ícone na bandeja (StatusNotifierItem) -- só sobe se o usuário não
+    // tiver desligado em Configurações (`cfg.tray_enabled`). Ligar/desligar
+    // esse toggle só tem efeito no próximo início do daemon, não ao vivo.
+    // Sem host disponível (ex: GNOME sem a extensão AppIndicator), só loga
+    // e segue sem ícone — o resto do daemon funciona igual.
+    let tray_handle = if cfg.tray_enabled {
+        match runtime.block_on(tray::spawn(tx.clone(), configure_tx.clone())) {
+            Ok(handle) => Some(handle),
+            Err(e) => {
+                eprintln!("Ícone da bandeja indisponível: {e}");
+                None
+            }
         }
+    } else {
+        None
     };
 
     if let Some(action) = on_start {
@@ -209,9 +228,10 @@ async fn call_remote(method: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-// `adw::PreferencesWindow` está depreciada desde libadwaita 1.6 (ver o
-// mesmo `#[allow(deprecated)]` em settings_window.rs) -- só rastreamos o
-// tipo aqui, sem instanciar nada, então esse allow cobre os dois usos.
+// `adw::PreferencesWindow` está obsoleto desde a libadwaita 1.6 (substituta
+// é `AdwPreferencesDialog`, que precisa de uma janela "pai" persistente pra
+// se apresentar sobre -- não se aplica bem a um daemon de bandeja sem
+// janela principal fixa). Continua funcionando normalmente, só avisa.
 #[allow(deprecated)]
 fn run_gtk_loop(
     runtime: tokio::runtime::Runtime,
@@ -232,7 +252,7 @@ fn run_gtk_loop(
         .build();
 
     // libadwaita precisa ser inicializado uma vez antes de usar seus widgets
-    // (adw::PreferencesWindow etc, usados na janela de configurações).
+    // (o `AdwStyleManager` de tema, usado na janela de configurações).
     if let Err(e) = adw::init() {
         eprintln!("Erro ao inicializar libadwaita: {e}");
     }
@@ -272,6 +292,15 @@ fn run_gtk_loop(
                         tx.clone(),
                         configure_tx.clone(),
                         is_first_run,
+                        "cfg",
+                        &settings_window_ref,
+                    ),
+                    DaemonEvent::OpenHistory => settings_window::open_settings_window(
+                        &app,
+                        tx.clone(),
+                        configure_tx.clone(),
+                        is_first_run,
+                        "hist",
                         &settings_window_ref,
                     ),
                     DaemonEvent::Quit => {

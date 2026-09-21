@@ -3,6 +3,7 @@ mod capture;
 mod config;
 mod daemon;
 mod editor;
+mod fonts;
 mod global_shortcut;
 mod launcher;
 mod notify;

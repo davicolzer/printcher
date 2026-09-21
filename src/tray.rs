@@ -53,6 +53,15 @@ impl ksni::Tray for PrintcherTray {
                 ..Default::default()
             }
             .into(),
+            StandardItem {
+                label: "Histórico de capturas".into(),
+                icon_name: "document-open-recent-symbolic".into(),
+                activate: Box::new(|this: &mut Self| {
+                    let _ = this.tx.send_blocking(DaemonEvent::OpenHistory);
+                }),
+                ..Default::default()
+            }
+            .into(),
             MenuItem::Separator,
             StandardItem {
                 label: "Sair".into(),

@@ -1,34 +1,34 @@
 //! Ícones do editor, desenhados via Cairo em vez de carregados de um tema de
 //! ícones do sistema -- garante aparência consistente e independe de quais
 //! ícones simbólicos estão instalados (dev machine vs runtime do Flatpak).
+//!
+//! As coordenadas de cada ícone são as do design (`design_handoff_printcher/`),
+//! convertidas do viewBox `0 0 24 24` do SVG original pra este canvas de
+//! 20×20 (fator ~0.833), pra reproduzir os traços com fidelidade.
+//!
+//! Cada função recebe a cor do traço em vez de usar uma cor fixa: ao
+//! contrário de um ícone de tema (que o GTK sabe recolorir sozinho via
+//! `currentColor`), esse é um bitmap já pronto -- a única forma de mudar de
+//! cor conforme o estado do botão (ferramenta ativa/inativa, por exemplo) é
+//! gerar uma textura nova pra cada cor precisada (ver `editor.rs`, que gera
+//! duas versões de cada ícone de ferramenta).
 
 use gtk::cairo;
 use gtk::gdk;
 use gtk::glib;
 
 const SIZE: i32 = 20;
-const STROKE: (f64, f64, f64) = (0.24, 0.24, 0.27);
 
-fn render(draw: impl Fn(&cairo::Context)) -> gdk::Texture {
+pub type Color = (f64, f64, f64, f64);
+
+fn render(color: Color, draw: impl Fn(&cairo::Context)) -> gdk::Texture {
     let surface =
         cairo::ImageSurface::create(cairo::Format::ARgb32, SIZE, SIZE).expect("falha ao criar superfície do ícone");
     let cr = cairo::Context::new(&surface).expect("falha ao criar contexto do ícone");
     cr.set_line_cap(cairo::LineCap::Round);
     cr.set_line_join(cairo::LineJoin::Round);
-
-    // `draw` só monta geometria e chama fill/stroke com a cor/largura atual
-    // do contexto -- por isso dá pra chamar duas vezes com ajustes
-    // diferentes antes de cada uma, sem precisar reconstruir o path. Um halo
-    // claro e largo desenhado antes garante contraste do traço escuro final
-    // contra qualquer fundo (botão marcado com cor de destaque, tema
-    // escuro, etc.) -- sem ele, o traço escuro sozinho quase sumia nesses
-    // casos.
-    cr.set_line_width(3.6);
-    cr.set_source_rgba(1.0, 1.0, 1.0, 0.95);
-    draw(&cr);
-
     cr.set_line_width(1.6);
-    cr.set_source_rgb(STROKE.0, STROKE.1, STROKE.2);
+    cr.set_source_rgba(color.0, color.1, color.2, color.3);
     draw(&cr);
     drop(cr);
 
@@ -37,87 +37,50 @@ fn render(draw: impl Fn(&cairo::Context)) -> gdk::Texture {
     gdk::Texture::from_bytes(&glib::Bytes::from(&buf)).expect("falha ao criar textura do ícone")
 }
 
-pub fn select() -> gdk::Texture {
-    render(|cr| {
-        cr.move_to(5.0, 3.0);
-        cr.line_to(5.0, 17.0);
-        cr.line_to(9.0, 13.3);
-        cr.line_to(12.3, 13.3);
-        cr.close_path();
-        let _ = cr.fill_preserve();
+pub fn crop(color: Color) -> gdk::Texture {
+    render(color, |cr| {
+        cr.move_to(5.8, 2.5);
+        cr.line_to(5.8, 14.2);
+        cr.line_to(17.5, 14.2);
+        cr.move_to(14.2, 17.5);
+        cr.line_to(14.2, 5.8);
+        cr.line_to(2.5, 5.8);
         let _ = cr.stroke();
     })
 }
 
-pub fn crop() -> gdk::Texture {
-    render(|cr| {
-        cr.move_to(4.0, 8.0);
-        cr.line_to(4.0, 4.0);
-        cr.line_to(8.0, 4.0);
-        cr.move_to(12.0, 4.0);
-        cr.line_to(16.0, 4.0);
-        cr.line_to(16.0, 8.0);
-        cr.move_to(16.0, 12.0);
-        cr.line_to(16.0, 16.0);
-        cr.line_to(12.0, 16.0);
-        cr.move_to(8.0, 16.0);
-        cr.line_to(4.0, 16.0);
-        cr.line_to(4.0, 12.0);
+pub fn arrow(color: Color) -> gdk::Texture {
+    render(color, |cr| {
+        cr.move_to(4.2, 15.8);
+        cr.line_to(15.8, 4.2);
+        let _ = cr.stroke();
+        cr.move_to(15.8, 10.8);
+        cr.line_to(15.8, 4.2);
+        cr.line_to(9.2, 4.2);
         let _ = cr.stroke();
     })
 }
 
-pub fn line() -> gdk::Texture {
-    render(|cr| {
-        cr.move_to(4.0, 16.0);
-        cr.line_to(16.0, 4.0);
+pub fn rect(color: Color) -> gdk::Texture {
+    render(color, |cr| {
+        cr.rectangle(3.3, 5.0, 13.3, 10.0);
         let _ = cr.stroke();
     })
 }
 
-pub fn arrow() -> gdk::Texture {
-    render(|cr| {
-        cr.move_to(4.0, 16.0);
-        cr.line_to(16.0, 4.0);
-        let _ = cr.stroke();
-        cr.move_to(16.0, 4.0);
-        cr.line_to(10.7, 5.3);
-        let _ = cr.stroke();
-        cr.move_to(16.0, 4.0);
-        cr.line_to(14.7, 9.3);
-        let _ = cr.stroke();
-    })
-}
-
-pub fn rect() -> gdk::Texture {
-    render(|cr| {
-        cr.rectangle(4.0, 5.0, 12.0, 10.0);
-        let _ = cr.stroke();
-    })
-}
-
-pub fn ellipse() -> gdk::Texture {
-    render(|cr| {
+pub fn ellipse(color: Color) -> gdk::Texture {
+    render(color, |cr| {
         let _ = cr.save();
         cr.translate(10.0, 10.0);
-        cr.scale(1.0, 0.7);
-        cr.arc(0.0, 0.0, 7.0, 0.0, std::f64::consts::TAU);
+        cr.scale(7.5, 5.8);
+        cr.arc(0.0, 0.0, 1.0, 0.0, std::f64::consts::TAU);
         let _ = cr.restore();
         let _ = cr.stroke();
     })
 }
 
-pub fn text() -> gdk::Texture {
-    render(|cr| {
-        cr.select_font_face("sans-serif", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
-        cr.set_font_size(14.0);
-        cr.move_to(6.0, 15.0);
-        let _ = cr.show_text("T");
-    })
-}
-
-pub fn undo() -> gdk::Texture {
-    render(|cr| {
+pub fn undo(color: Color) -> gdk::Texture {
+    render(color, |cr| {
         let _ = cr.save();
         cr.translate(10.0, 11.0);
         cr.arc_negative(0.0, 0.0, 6.0, 0.4, std::f64::consts::PI + 0.6);
@@ -132,8 +95,8 @@ pub fn undo() -> gdk::Texture {
     })
 }
 
-pub fn cancel() -> gdk::Texture {
-    render(|cr| {
+pub fn cancel(color: Color) -> gdk::Texture {
+    render(color, |cr| {
         cr.move_to(5.0, 5.0);
         cr.line_to(15.0, 15.0);
         let _ = cr.stroke();
@@ -143,22 +106,68 @@ pub fn cancel() -> gdk::Texture {
     })
 }
 
-pub fn copy() -> gdk::Texture {
-    render(|cr| {
-        cr.rectangle(4.0, 6.0, 10.0, 10.0);
+pub fn copy(color: Color) -> gdk::Texture {
+    render(color, |cr| {
+        cr.rectangle(4.2, 4.2, 8.3, 8.3);
         let _ = cr.stroke();
-        cr.rectangle(7.0, 3.0, 10.0, 10.0);
+        cr.rectangle(7.5, 7.5, 9.2, 9.2);
         let _ = cr.stroke();
     })
 }
 
-pub fn save() -> gdk::Texture {
-    render(|cr| {
-        cr.rectangle(4.0, 3.0, 12.0, 14.0);
+pub fn save(color: Color) -> gdk::Texture {
+    render(color, |cr| {
+        cr.move_to(10.0, 3.3);
+        cr.line_to(10.0, 11.7);
         let _ = cr.stroke();
-        cr.rectangle(6.5, 3.0, 7.0, 5.0);
+        cr.move_to(6.7, 9.2);
+        cr.line_to(10.0, 12.5);
+        cr.line_to(13.3, 9.2);
         let _ = cr.stroke();
-        cr.rectangle(6.0, 11.0, 8.0, 5.0);
+        cr.move_to(4.2, 15.0);
+        cr.line_to(15.8, 15.0);
+        let _ = cr.stroke();
+    })
+}
+
+pub fn pen(color: Color) -> gdk::Texture {
+    render(color, |cr| {
+        cr.move_to(3.3, 16.7);
+        cr.line_to(6.7, 15.8);
+        cr.line_to(15.8, 6.7);
+        cr.line_to(13.3, 4.2);
+        cr.line_to(4.2, 13.3);
+        cr.close_path();
+        let _ = cr.stroke();
+    })
+}
+
+/// Diferente dos outros ícones (contorno), esse é preenchido -- 4
+/// quadrados em xadrez, dois deles com opacidade reduzida (igual ao SVG do
+/// design), representando pixels desfocados.
+pub fn blur(color: Color) -> gdk::Texture {
+    render(color, |cr| {
+        let dim = (color.0, color.1, color.2, color.3 * 0.55);
+        let squares = [(3.3, 3.3, false), (11.7, 3.3, true), (3.3, 11.7, true), (11.7, 11.7, false)];
+        for (x, y, faded) in squares {
+            if faded {
+                cr.set_source_rgba(dim.0, dim.1, dim.2, dim.3);
+            } else {
+                cr.set_source_rgba(color.0, color.1, color.2, color.3);
+            }
+            cr.rectangle(x, y, 5.0, 5.0);
+            let _ = cr.fill();
+        }
+    })
+}
+
+pub fn step(color: Color) -> gdk::Texture {
+    render(color, |cr| {
+        cr.arc(10.0, 10.0, 7.08, 0.0, std::f64::consts::TAU);
+        let _ = cr.stroke();
+        cr.move_to(8.75, 8.0);
+        cr.line_to(10.33, 7.17);
+        cr.line_to(10.33, 13.33);
         let _ = cr.stroke();
     })
 }

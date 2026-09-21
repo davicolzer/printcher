@@ -11,15 +11,10 @@
         "--socket=wayland",
         "--socket=fallback-x11",
         "--share=ipc",
-
         "--device=dri",
-
         "--talk-name=org.freedesktop.portal.Desktop",
-
         "--talk-name=org.kde.StatusNotifierWatcher",
-
         "--filesystem=xdg-pictures/printcher:create",
-
         "--filesystem=xdg-config/autostart:create"
     ],
     "build-options": {
@@ -1100,6 +1095,19 @@
                 {
                     "type": "archive",
                     "archive-type": "tar-gzip",
+                    "url": "https://static.crates.io/crates/image-webp/image-webp-0.2.4.crate",
+                    "sha256": "525e9ff3e1a4be2fbea1fdf0e98686a6d98b4d8f937e1bf7402245af1909e8c3",
+                    "dest": "cargo/vendor/image-webp-0.2.4"
+                },
+                {
+                    "type": "inline",
+                    "contents": "{\"package\": \"525e9ff3e1a4be2fbea1fdf0e98686a6d98b4d8f937e1bf7402245af1909e8c3\", \"files\": {}}",
+                    "dest": "cargo/vendor/image-webp-0.2.4",
+                    "dest-filename": ".cargo-checksum.json"
+                },
+                {
+                    "type": "archive",
+                    "archive-type": "tar-gzip",
                     "url": "https://static.crates.io/crates/indexmap/indexmap-2.14.1.crate",
                     "sha256": "07aa2048142242915a31d35844fb311e0e53fcca590c3a0a40dcf1b841fa09eb",
                     "dest": "cargo/vendor/indexmap-2.14.1"
@@ -1511,6 +1519,19 @@
                     "type": "inline",
                     "contents": "{\"package\": \"d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea\", \"files\": {}}",
                     "dest": "cargo/vendor/pxfm-0.1.30",
+                    "dest-filename": ".cargo-checksum.json"
+                },
+                {
+                    "type": "archive",
+                    "archive-type": "tar-gzip",
+                    "url": "https://static.crates.io/crates/quick-error/quick-error-2.0.1.crate",
+                    "sha256": "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3",
+                    "dest": "cargo/vendor/quick-error-2.0.1"
+                },
+                {
+                    "type": "inline",
+                    "contents": "{\"package\": \"a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3\", \"files\": {}}",
+                    "dest": "cargo/vendor/quick-error-2.0.1",
                     "dest-filename": ".cargo-checksum.json"
                 },
                 {
@@ -2291,6 +2312,32 @@
                     "type": "inline",
                     "contents": "{\"package\": \"34b31d188d9d685a4f9c7b46d6e36631b07058d2cfe190267adce54dc230bf12\", \"files\": {}}",
                     "dest": "cargo/vendor/zlib-rs-0.6.7",
+                    "dest-filename": ".cargo-checksum.json"
+                },
+                {
+                    "type": "archive",
+                    "archive-type": "tar-gzip",
+                    "url": "https://static.crates.io/crates/zune-core/zune-core-0.5.3.crate",
+                    "sha256": "d56377fd46368984a170bc5aac5567e52ca5da874caa60bea39fcbca78fb658b",
+                    "dest": "cargo/vendor/zune-core-0.5.3"
+                },
+                {
+                    "type": "inline",
+                    "contents": "{\"package\": \"d56377fd46368984a170bc5aac5567e52ca5da874caa60bea39fcbca78fb658b\", \"files\": {}}",
+                    "dest": "cargo/vendor/zune-core-0.5.3",
+                    "dest-filename": ".cargo-checksum.json"
+                },
+                {
+                    "type": "archive",
+                    "archive-type": "tar-gzip",
+                    "url": "https://static.crates.io/crates/zune-jpeg/zune-jpeg-0.5.15.crate",
+                    "sha256": "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296",
+                    "dest": "cargo/vendor/zune-jpeg-0.5.15"
+                },
+                {
+                    "type": "inline",
+                    "contents": "{\"package\": \"27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296\", \"files\": {}}",
+                    "dest": "cargo/vendor/zune-jpeg-0.5.15",
                     "dest-filename": ".cargo-checksum.json"
                 },
                 {
