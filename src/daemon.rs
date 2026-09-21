@@ -130,6 +130,15 @@ fn run_with(on_start: Option<InitialAction>, on_forward: Option<InitialAction>) 
         eprintln!("Erro ao instalar a fonte de dislexia: {e}");
     }
 
+    // Garante que a pasta de destino exista já no início -- `dest_path`
+    // também cria na hora de salvar, mas isso só resolve o problema depois
+    // que o usuário já tentou salvar uma vez. Criar aqui evita a aba
+    // Histórico aparecer vazia/confusa se a pasta tiver sido apagada por
+    // fora (ex: manualmente pelo usuário) enquanto o app não estava rodando.
+    if let Err(e) = std::fs::create_dir_all(crate::capture::dest_dir(&cfg)) {
+        eprintln!("Erro ao criar a pasta de destino: {e}");
+    }
+
     // O atalho global (portal GlobalShortcuts) roda numa task própria do
     // runtime, em paralelo com o loop do GTK. Se o portal não estiver
     // disponível (ex: desktop sem suporte), só loga e segue sem esse atalho
