@@ -122,14 +122,6 @@ fn run_with(on_start: Option<InitialAction>, on_forward: Option<InitialAction>) 
     // pra mostrar um banner de boas-vindas na tela de configurações.
     let (cfg, is_first_run) = crate::config::load_or_init();
 
-    // Garante que a fonte de dislexia esteja disponível pro fontconfig
-    // achar (ver `fonts.rs`) -- não trava o daemon se falhar por algum
-    // motivo, só o toggle correspondente em Configurações não vai ter
-    // efeito visual.
-    if let Err(e) = crate::fonts::ensure_installed() {
-        eprintln!("Erro ao instalar a fonte de dislexia: {e}");
-    }
-
     // Garante que a pasta de destino exista já no início -- `dest_path`
     // também cria na hora de salvar, mas isso só resolve o problema depois
     // que o usuário já tentou salvar uma vez. Criar aqui evita a aba

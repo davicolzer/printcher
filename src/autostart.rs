@@ -12,7 +12,7 @@ pub fn install() -> anyhow::Result<()> {
     let contents = format!(
         "[Desktop Entry]\n\
          Type=Application\n\
-         Name=printcher\n\
+         Name=Printcher\n\
          Comment=Captura de tela em segundo plano\n\
          Exec={exe} --daemon\n\
          X-GNOME-Autostart-enabled=true\n\

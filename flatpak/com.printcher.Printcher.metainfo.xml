@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>com.printcher.Printcher</id>
-  <name>printcher</name>
+  <name>Printcher</name>
   <summary>Captura de tela e anotação para Linux</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
@@ -9,7 +9,7 @@
 
   <description>
     <p>
-      printcher é uma ferramenta de captura de tela e anotação para Linux,
+      Printcher é uma ferramenta de captura de tela e anotação para Linux,
       inspirada no ShareX, com suporte a X11 e Wayland (GNOME e KDE).
     </p>
     <p>Recursos:</p>

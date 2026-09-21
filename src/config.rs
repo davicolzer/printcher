@@ -61,10 +61,6 @@ pub struct Config {
     #[serde(default = "default_true")]
     pub tray_enabled: bool,
     pub theme: Theme,
-    /// Só persiste a preferência por enquanto -- o efeito visual de
-    /// trocar pra fonte OpenDyslexic ainda depende de empacotar a fonte no
-    /// Flatpak, que é trabalho de uma fase futura.
-    pub dyslexia_font: bool,
     /// `None` = usa o padrão calculado (`dirs::picture_dir()/printcher`) --
     /// só grava um caminho fixo aqui quando o usuário escolhe outra pasta
     /// explicitamente, pra continuar acompanhando se a pasta de Imagens do

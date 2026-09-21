@@ -1,6 +1,6 @@
 # printcher
 
-Ferramenta de captura de tela e anotação para Linux, inspirada no [ShareX](https://getsharex.com/).
+Ferramenta de captura de tela e anotação para Linux.
 
 Funciona tanto em **X11** quanto em **Wayland**, e em qualquer desktop que
 siga os padrões do freedesktop.org (testado em GNOME; compatível com KDE).
@@ -30,8 +30,6 @@ siga os padrões do freedesktop.org (testado em GNOME; compatível com KDE).
 - **Roda em segundo plano**: ícone na bandeja do sistema dá acesso rápido a
   capturar, configurar o atalho, abrir as configurações ou o histórico.
 - **Inicia com o sistema** automaticamente (configurável).
-- **Fonte amigável pra dislexia** (OpenDyslexic) como opção na janela de
-  configurações.
 - Interface nativa do GNOME/libadwaita (tema claro/escuro/sistema,
   janela de configurações redimensionável) — sem visual próprio pra
   manter, sem CSS pra brigar com o tema do usuário.

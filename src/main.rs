@@ -3,7 +3,6 @@ mod capture;
 mod config;
 mod daemon;
 mod editor;
-mod fonts;
 mod global_shortcut;
 mod launcher;
 mod notify;
@@ -46,6 +45,6 @@ fn uninstall_all() -> anyhow::Result<()> {
     autostart::uninstall()?;
     launcher::uninstall()?;
     config::remove_all()?;
-    println!("printcher desinstalado (autostart, launcher e configurações removidos).");
+    println!("Printcher desinstalado (autostart, launcher e configurações removidos).");
     Ok(())
 }

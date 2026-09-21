@@ -49,11 +49,10 @@ pub fn open_settings_window(
 
     let window = adw::PreferencesWindow::builder()
         .application(app)
-        .title("Configurações — printcher")
+        .title("Configurações — Printcher")
         .default_width(560)
         .default_height(640)
         .build();
-    apply_dyslexia_font(&window, cfg.dyslexia_font);
 
     let cfg_page = adw::PreferencesPage::builder().title("Configurações").icon_name("preferences-system-symbolic").build();
     if is_first_run {
@@ -101,14 +100,6 @@ pub fn open_settings_window(
     }
 
     window.present();
-}
-
-fn apply_dyslexia_font(window: &adw::PreferencesWindow, enabled: bool) {
-    if enabled {
-        window.add_css_class("pc-dyslexia");
-    } else {
-        window.remove_css_class("pc-dyslexia");
-    }
 }
 
 /// O tema claro/escuro/sistema agora é só o `AdwStyleManager` global -- sem
@@ -357,20 +348,6 @@ fn general_group(cfg: &Config) -> adw::PreferencesGroup {
         }
     });
     group.add(&theme_row);
-
-    let font_row = adw::SwitchRow::builder().title("Fonte amigável para dislexia").subtitle("Usa a fonte OpenDyslexic nesta janela").active(cfg.dyslexia_font).build();
-    font_row.connect_active_notify(|row| {
-        let active = row.is_active();
-        if let Some(window) = row.root().and_then(|r| r.downcast::<adw::PreferencesWindow>().ok()) {
-            apply_dyslexia_font(&window, active);
-        }
-        let mut cfg = config::load();
-        cfg.dyslexia_font = active;
-        if let Err(e) = config::save(&cfg) {
-            eprintln!("Erro ao salvar configurações: {e}");
-        }
-    });
-    group.add(&font_row);
 
     group
 }

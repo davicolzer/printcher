@@ -16,7 +16,7 @@ impl ksni::Tray for PrintcherTray {
     }
 
     fn title(&self) -> String {
-        "printcher".into()
+        "Printcher".into()
     }
 
     fn icon_name(&self) -> String {

@@ -186,7 +186,7 @@ pub fn open_editor_window(
 
     let window = gtk::ApplicationWindow::builder()
         .application(app)
-        .title("printcher — editor de captura")
+        .title("Printcher — editor de captura")
         .build();
 
     // A imagem ocupa a janela inteira; a barra de ferramentas flutua por

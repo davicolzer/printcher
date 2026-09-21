@@ -14,7 +14,7 @@ pub fn install() -> anyhow::Result<()> {
     let contents = format!(
         "[Desktop Entry]\n\
          Type=Application\n\
-         Name=printcher\n\
+         Name=Printcher\n\
          Comment=Captura de tela e anotação\n\
          Exec={exe} --settings\n\
          Icon=camera-photo-symbolic\n\
